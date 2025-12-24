@@ -72,6 +72,28 @@ function initSettings() {
     }
 }
 
+function openSettings() {
+    // Charger token actuel
+    chrome.storage.local.get(['githubToken'], (result) => {
+        if (result.githubToken && githubTokenInput) {
+            githubTokenInput.value = result.githubToken;
+        }
+    });
+    settingsModal.classList.remove('hidden');
+}
+
+function closeSettings() {
+    settingsModal.classList.add('hidden');
+}
+
+function saveSettings() {
+    const token = githubTokenInput.value.trim();
+    chrome.storage.local.set({ githubToken: token }, () => {
+        alert('Paramètres sauvegardés !');
+        closeSettings();
+    });
+}
+
 /**
  * Gestion des modes de scan
  */
