@@ -36,26 +36,35 @@
 [data-theme="light"] {
     /* Base Colors - Light Mode */
     --bg-primary: #ffffff;
-    --bg-secondary: #f4f4f5;
-    --bg-tertiary: #e4e4e7;
-    --bg-highlight: rgba(0, 0, 0, 0.03);
+    --bg-secondary: #f3f4f6;
+    /* Cool gray 100 */
+    --bg-tertiary: #e5e7eb;
+    /* Cool gray 200 */
+    --bg-highlight: rgba(0, 0, 0, 0.05);
 
-    --text-primary: #18181b;
-    --text-secondary: #52525b;
-    --text-muted: #a1a1aa;
+    /* Text - High Contrast for Light Mode */
+    --text-primary: #111827;
+    /* Gray 900 */
+    --text-secondary: #4b5563;
+    /* Gray 600 - Much darker for readability */
+    --text-muted: #6b7280;
+    /* Gray 500 */
 
-    --border-color: #e4e4e7;
-    --border-highlight: #d4d4d8;
+    --border-color: #e5e7eb;
+    --border-highlight: #d1d5db;
 
     /* Accents (Adjusted for contrast) */
     --accent-primary: #2563eb;
     --accent-secondary: #7c3aed;
     --accent-gradient: linear-gradient(135deg, #2563eb, #7c3aed);
-    --accent-glow: rgba(37, 99, 235, 0.3);
+    --accent-glow: rgba(37, 99, 235, 0.15);
+    /* More subtle glow */
 
     /* Effects */
-    --glass-bg: rgba(255, 255, 255, 0.8);
-    --glass-border: rgba(0, 0, 0, 0.05);
+    --glass-bg: rgba(255, 255, 255, 0.95);
+    /* Almost opaque for readability */
+    --glass-border: rgba(0, 0, 0, 0.08);
+    /* Stronger border definition */
 }
 
 * {
