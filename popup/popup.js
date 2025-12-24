@@ -893,7 +893,7 @@ function displayResults(results) {
     resultsSection.classList.remove('hidden');
 
     // Animer la jauge
-    animateScoreGauge(results.score || 0);
+    animateScore(results.score || 0);
 
     // Mettre à jour les infos
     // Mettre à jour les infos
@@ -1087,28 +1087,34 @@ function displayResults(results) {
 }
 
 function generateFileCategoryBlock(title, files, type) {
-    const borderColor = type === 'suspicious' ? '#ef4444' : type === 'questionable' ? '#f59e0b' : '#10b981';
-    const bg = type === 'suspicious' ? 'rgba(239,68,68,0.1)' : type === 'questionable' ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)';
+    const icon = type === 'suspicious' ? '🚨' : type === 'questionable' ? '⚠️' : '✅';
+    // Mapping type to class name
+    const typeClass = type; // suspicious, questionable, clean
+    const scoreColorClass = `text-${type}`;
 
     let html = `
         <div class="file-category">
-            <h3 style="color: ${borderColor}; display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                ${type === 'suspicious' ? '🚨' : type === 'questionable' ? '⚠️' : '✅'} 
-                ${title} (${files.length})
-            </h3>
+            <div class="category-header ${typeClass}">
+                <span class="icon">${icon}</span>
+                <span class="title">${title}</span>
+                <span class="count" style="opacity:0.6; font-size:0.9em; margin-left:auto;">(${files.length})</span>
+            </div>
             <div class="file-list">
     `;
 
     files.forEach(f => {
-        const scoreColor = getScoreColor(f.score);
         html += `
-            <div class="file-item" data-path="${f.path}" style="border-left: 3px solid ${borderColor};">
+            <div class="file-item ${typeClass}" data-path="${f.path}">
                 <div class="file-info">
                     <div class="name">${f.path}</div>
-                    <div class="meta">JavaScript • ${f.lineCount || '?'} lines</div>
+                    <div class="meta">
+                        <span>JavaScript</span>
+                        <span>•</span>
+                        <span>${f.lineCount || '?'} lines</span>
+                    </div>
                 </div>
                 <div class="file-score">
-                    <span class="val" style="color:${scoreColor}">${f.score}</span>
+                    <span class="val ${scoreColorClass}">${f.score}</span>
                     <span class="lbl">AI Score</span>
                 </div>
             </div>

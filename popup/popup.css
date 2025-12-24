@@ -819,6 +819,125 @@ body[data-theme="light"] .icon-moon {
     background: var(--text-secondary);
 }
 
+/* --- V3 UI OVERHAUL CSS : FILE CARDS --- */
+
+.file-category {
+    margin-bottom: 24px;
+}
+
+.category-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 1.1em;
+    font-weight: 600;
+}
+
+.category-header.suspicious {
+    color: #f87171;
+}
+
+.category-header.questionable {
+    color: #fbbf24;
+}
+
+.category-header.clean {
+    color: #34d399;
+}
+
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    /* Glassmorphism base */
+    padding: 16px 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    border-left-width: 4px;
+    /* Colored indicator left */
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.file-item:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.file-item.suspicious {
+    border-left-color: #ef4444;
+}
+
+.file-item.questionable {
+    border-left-color: #f59e0b;
+}
+
+.file-item.clean {
+    border-left-color: #10b981;
+}
+
+.file-info .name {
+    font-size: 0.95em;
+    font-family: 'Fira Code', monospace;
+    /* Monospace for file paths */
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+}
+
+.file-info .meta {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.file-score {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.file-score .val {
+    font-size: 1.6em;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
+.file-score .lbl {
+    font-size: 0.7em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+}
+
+/* Colors for scores */
+.text-suspicious {
+    color: #ef4444;
+}
+
+.text-questionable {
+    color: #f59e0b;
+}
+
+.text-clean {
+    color: #10b981;
+}
+
 /* Deep Scan Toggle Styling */
 .deep-scan-container {
     margin-bottom: 12px;
