@@ -619,11 +619,15 @@ async function scanRepositoryMode(url) {
                     uncertain: report.distribution.questionable,
                     aiLikely: report.distribution.suspicious
                 },
-                results: report.files.suspicious.concat(report.files.clean).map(f => ({
+                results: [
+                    ...report.files.suspicious,
+                    ...report.files.questionable,
+                    ...report.files.clean
+                ].map(f => ({
                     path: f.path,
-                    score: f.finalScore,
+                    score: f.score ?? f.finalScore ?? 0,
                     lineCount: f.lineCount,
-                    breakdown: f.breakdown // Pass breakdown for UI stats
+                    breakdown: f.breakdown
                 })),
                 patterns: report.topPatterns, // V3 patterns
                 totalFiles: report.summary.fileCount,
