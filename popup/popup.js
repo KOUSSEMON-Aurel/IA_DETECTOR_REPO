@@ -333,322 +333,323 @@ async function loadState() {
                 currentMode = 'repo';
                 updateUIForMode();
             }
-        } catch (error) {
-            console.error('Erreur chargement état:', error);
         }
+    } catch (error) {
+        console.error('Erreur chargement état:', error);
     }
+}
 
 /**
  * Sauvegarde l'état actuel
  */
 function saveState() {
-        const state = {
-            repoUrl: repoUrlInput.value,
-            mode: currentMode,
-            results: currentResults,
-            timestamp: Date.now()
-        };
-        chrome.storage.local.set({ vibeState: state });
-    }
+    const state = {
+        repoUrl: repoUrlInput.value,
+        mode: currentMode,
+        results: currentResults,
+        timestamp: Date.now()
+    };
+    chrome.storage.local.set({ vibeState: state });
+}
 
-    /**
-     * Extrait la base du repo (user/repo) pour comparaison
-     */
-    function getRepoBase(url) {
-        if (!url) return null;
-        const match = url.match(/github\.com\/([^\/]+\/[^\/]+)/) || url.match(/gitlab\.com\/([^\/]+\/[^\/]+)/);
-        return match ? match[1] : null;
-    }
+/**
+ * Extrait la base du repo (user/repo) pour comparaison
+ */
+function getRepoBase(url) {
+    if (!url) return null;
+    const match = url.match(/github\.com\/([^\/]+\/[^\/]+)/) || url.match(/gitlab\.com\/([^\/]+\/[^\/]+)/);
+    return match ? match[1] : null;
+}
 
 
-    /**
-     * Bouton de scan
-     */
-    function initScanButton() {
-        // Sauvegarder l'URL quand on tape
-        repoUrlInput.addEventListener('input', () => saveState());
+/**
+ * Bouton de scan
+ */
+function initScanButton() {
+    // Sauvegarder l'URL quand on tape
+    repoUrlInput.addEventListener('input', () => saveState());
 
-        scanButton.addEventListener('click', async () => {
-            const url = repoUrlInput.value.trim();
+    scanButton.addEventListener('click', async () => {
+        const url = repoUrlInput.value.trim();
 
-            if (!url) {
-                alert('Veuillez entrer une URL');
-                return;
-            }
+        if (!url) {
+            alert('Veuillez entrer une URL');
+            return;
+        }
 
-            // Lancer le scan selon le mode
-            try {
-                showLoading();
-
-                if (currentMode === 'repo') {
-                    await scanRepositoryMode(url);
-                } else if (currentMode === 'file') {
-                    await scanFileMode(url);
-                } else if (currentMode === 'folder') {
-                    await scanFolderMode(url);
-                }
-
-            } catch (error) {
-                hideLoading();
-                alert(`Erreur: ${error.message}`);
-                console.error('Erreur scan:', error);
-            }
-        });
-    }
-
-    /**
-     * Mode Repository
-     */
-    async function scanRepositoryMode(url) {
-        const token = await getStoredToken();
-        console.log('Mode Repo: Token présent ?', !!token);
-
+        // Lancer le scan selon le mode
         try {
-            const results = await scanRepository(url, (progress) => {
-                updateProgress(progress);
-            }, { token });
+            showLoading();
 
-            currentResults = results;
-            displayResults(results);
-            saveState();
+            if (currentMode === 'repo') {
+                await scanRepositoryMode(url);
+            } else if (currentMode === 'file') {
+                await scanFileMode(url);
+            } else if (currentMode === 'folder') {
+                await scanFolderMode(url);
+            }
 
         } catch (error) {
-            console.error('Erreur scan:', error);
             hideLoading();
-
-            if (error.message.includes('403')) {
-                alert("Erreur 403 (Accès refusé) : Veuillez vérifier que votre Token GitHub est valide et configuré dans les paramètres (⚙️).");
-            } else if (error.message.includes('404')) {
-                alert("Erreur 404 : Dépôt introuvable ou privé. Vérifiez l'URL et votre Token.");
-            } else {
-                alert(`Erreur lors du scan : ${error.message}`);
-            }
+            alert(`Erreur: ${error.message}`);
+            console.error('Erreur scan:', error);
         }
-    }
+    });
+}
 
-    /**
-     * Mode File (simplifié pour la démo)
-     */
-    async function scanFileMode(url) {
-        // Pour l'instant, simulation
-        setTimeout(() => {
-            const mockResults = {
-                score: 75,
-                confidence: 80,
-                verdict: '⚠️ Probablement généré par IA',
-                summary: {
-                    human: 12,
-                    uncertain: 5,
-                    aiLikely: 45
-                },
-                patterns: [],
-                details: {}
-            };
+/**
+ * Mode Repository
+ */
+async function scanRepositoryMode(url) {
+    const token = await getStoredToken();
+    console.log('Mode Repo: Token présent ?', !!token);
 
-            currentResults = mockResults;
-            displayResults(mockResults);
-        }, 2000);
-    }
+    try {
+        const results = await scanRepository(url, (progress) => {
+            updateProgress(progress);
+        }, { token });
 
-    /**
-     * Mode Folder (simplifié)
-     */
-    async function scanFolderMode(url) {
-        setTimeout(() => {
-            const mockResults = {
-                score: 65,
-                confidence: 75,
-                verdict: '❓ Possiblement IA ou code mixte',
-                summary: {
-                    human: 30,
-                    uncertain: 10,
-                    aiLikely: 25
-                },
-                patterns: [],
-                details: {}
-            };
+        currentResults = results;
+        displayResults(results);
+        saveState();
 
-            currentResults = mockResults;
-            displayResults(mockResults);
-        }, 2000);
-    }
-
-    /**
-     * Affichage
-     */
-    function showLoading() {
-        urlInputSection.classList.add('hidden');
-        loadingSection.classList.remove('hidden');
-        resultsSection.classList.add('hidden');
-        // Avertissement fermeture
-        const loadingText = document.getElementById('loading-text');
-        if (loadingText) {
-            // On ne remplace pas le texte de stage, on ajoute un petit warning visuel si pas déjà présent
-            // (Simplifié: on compte sur le message d'erreur si ça coupe)
-        }
-    }
-
-    function hideLoading() {
-        loadingSection.classList.add('hidden');
-        urlInputSection.classList.remove('hidden');
-    }
-
-    function updateProgress(progress) {
-        const progressFill = document.getElementById('progress-fill');
-        const progressPercentage = document.getElementById('progress-percentage');
-        const loadingText = document.getElementById('loading-text');
-
-        if (progress.progress !== undefined) {
-            progressFill.style.width = `${progress.progress}%`;
-            progressPercentage.innerText = `${progress.progress}%`;
-        }
-
-        if (progress.stage) {
-            loadingText.innerText = progress.stage;
-        }
-    }
-
-    function displayResults(results) {
+    } catch (error) {
+        console.error('Erreur scan:', error);
         hideLoading();
-        resultsSection.classList.remove('hidden');
 
-        // Animer la jauge
-        animateScoreGauge(results.score || 0);
-
-        // Mettre à jour les infos
-        document.getElementById('score-number').innerText = results.score || 0;
-        document.getElementById('verdict-text').innerText = results.verdict || 'Analyse terminée';
-        document.getElementById('confidence-value').innerText = results.confidence || 0;
-        document.getElementById('files-count').innerText = results.totalFiles || 1;
-
-        // Stats
-        if (results.summary) {
-            document.getElementById('stat-human').innerText = results.summary.human || 0;
-            document.getElementById('stat-uncertain').innerText = results.summary.uncertain || 0;
-            document.getElementById('stat-ai').innerText = results.summary.aiLikely || 0;
-        }
-
-        // Hotspots
-        if (results.hotspots) {
-            displayHotspots(results.hotspots);
-        }
-
-        // File tree
-        if (results.results) {
-            displayFileTree(results.results);
-        }
-
-        // Patterns
-        if (results.patterns) {
-            displayPatterns(results.patterns);
+        if (error.message.includes('403')) {
+            alert("Erreur 403 (Accès refusé) : Veuillez vérifier que votre Token GitHub est valide et configuré dans les paramètres (⚙️).");
+        } else if (error.message.includes('404')) {
+            alert("Erreur 404 : Dépôt introuvable ou privé. Vérifiez l'URL et votre Token.");
+        } else {
+            alert(`Erreur lors du scan : ${error.message}`);
         }
     }
+}
 
-    function animateScoreGauge(score) {
-        const circle = document.getElementById('score-circle');
-        const circumference = 2 * Math.PI * 54; // r = 54
-        const offset = circumference - (score / 100) * circumference;
+/**
+ * Mode File (simplifié pour la démo)
+ */
+async function scanFileMode(url) {
+    // Pour l'instant, simulation
+    setTimeout(() => {
+        const mockResults = {
+            score: 75,
+            confidence: 80,
+            verdict: '⚠️ Probablement généré par IA',
+            summary: {
+                human: 12,
+                uncertain: 5,
+                aiLikely: 45
+            },
+            patterns: [],
+            details: {}
+        };
 
-        // Animation
-        setTimeout(() => {
-            circle.style.strokeDashoffset = offset;
-        }, 100);
+        currentResults = mockResults;
+        displayResults(mockResults);
+    }, 2000);
+}
+
+/**
+ * Mode Folder (simplifié)
+ */
+async function scanFolderMode(url) {
+    setTimeout(() => {
+        const mockResults = {
+            score: 65,
+            confidence: 75,
+            verdict: '❓ Possiblement IA ou code mixte',
+            summary: {
+                human: 30,
+                uncertain: 10,
+                aiLikely: 25
+            },
+            patterns: [],
+            details: {}
+        };
+
+        currentResults = mockResults;
+        displayResults(mockResults);
+    }, 2000);
+}
+
+/**
+ * Affichage
+ */
+function showLoading() {
+    urlInputSection.classList.add('hidden');
+    loadingSection.classList.remove('hidden');
+    resultsSection.classList.add('hidden');
+    // Avertissement fermeture
+    const loadingText = document.getElementById('loading-text');
+    if (loadingText) {
+        // On ne remplace pas le texte de stage, on ajoute un petit warning visuel si pas déjà présent
+        // (Simplifié: on compte sur le message d'erreur si ça coupe)
+    }
+}
+
+function hideLoading() {
+    loadingSection.classList.add('hidden');
+    urlInputSection.classList.remove('hidden');
+}
+
+function updateProgress(progress) {
+    const progressFill = document.getElementById('progress-fill');
+    const progressPercentage = document.getElementById('progress-percentage');
+    const loadingText = document.getElementById('loading-text');
+
+    if (progress.progress !== undefined) {
+        progressFill.style.width = `${progress.progress}%`;
+        progressPercentage.innerText = `${progress.progress}%`;
     }
 
-    function displayHotspots(hotspots) {
-        const hotspotsList = document.getElementById('hotspots-list');
-        hotspotsList.innerHTML = '';
+    if (progress.stage) {
+        loadingText.innerText = progress.stage;
+    }
+}
 
-        hotspots.slice(0, 5).forEach(file => {
-            const item = document.createElement('div');
-            item.className = 'hotspot-item';
-            item.innerHTML = `
+function displayResults(results) {
+    hideLoading();
+    resultsSection.classList.remove('hidden');
+
+    // Animer la jauge
+    animateScoreGauge(results.score || 0);
+
+    // Mettre à jour les infos
+    document.getElementById('score-number').innerText = results.score || 0;
+    document.getElementById('verdict-text').innerText = results.verdict || 'Analyse terminée';
+    document.getElementById('confidence-value').innerText = results.confidence || 0;
+    document.getElementById('files-count').innerText = results.totalFiles || 1;
+
+    // Stats
+    if (results.summary) {
+        document.getElementById('stat-human').innerText = results.summary.human || 0;
+        document.getElementById('stat-uncertain').innerText = results.summary.uncertain || 0;
+        document.getElementById('stat-ai').innerText = results.summary.aiLikely || 0;
+    }
+
+    // Hotspots
+    if (results.hotspots) {
+        displayHotspots(results.hotspots);
+    }
+
+    // File tree
+    if (results.results) {
+        displayFileTree(results.results);
+    }
+
+    // Patterns
+    if (results.patterns) {
+        displayPatterns(results.patterns);
+    }
+}
+
+function animateScoreGauge(score) {
+    const circle = document.getElementById('score-circle');
+    const circumference = 2 * Math.PI * 54; // r = 54
+    const offset = circumference - (score / 100) * circumference;
+
+    // Animation
+    setTimeout(() => {
+        circle.style.strokeDashoffset = offset;
+    }, 100);
+}
+
+function displayHotspots(hotspots) {
+    const hotspotsList = document.getElementById('hotspots-list');
+    hotspotsList.innerHTML = '';
+
+    hotspots.slice(0, 5).forEach(file => {
+        const item = document.createElement('div');
+        item.className = 'hotspot-item';
+        item.innerHTML = `
       <span class="hotspot-name" title="${file.path}">${file.path.split('/').pop()}</span>
       <span class="hotspot-score">${file.score}%</span>
     `;
-            hotspotsList.appendChild(item);
-        });
-    }
+        hotspotsList.appendChild(item);
+    });
+}
 
-    function displayFileTree(files) {
-        const fileTree = document.getElementById('file-tree');
-        fileTree.innerHTML = '';
+function displayFileTree(files) {
+    const fileTree = document.getElementById('file-tree');
+    fileTree.innerHTML = '';
 
-        files.slice(0, 20).forEach(file => {
-            const item = document.createElement('div');
-            item.style.padding = '8px';
-            item.style.borderBottom = '1px solid var(--border-color)';
-            item.innerHTML = `
+    files.slice(0, 20).forEach(file => {
+        const item = document.createElement('div');
+        item.style.padding = '8px';
+        item.style.borderBottom = '1px solid var(--border-color)';
+        item.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <span style="font-size: 12px;">📄 ${file.path}</span>
         <span style="font-weight: 700; color: ${getScoreColor(file.score)}">${file.score}%</span>
       </div>
     `;
-            fileTree.appendChild(item);
-        });
-    }
+        fileTree.appendChild(item);
+    });
+}
 
-    function displayPatterns(patterns) {
-        const patternsList = document.getElementById('patterns-list');
-        patternsList.innerHTML = '';
+function displayPatterns(patterns) {
+    const patternsList = document.getElementById('patterns-list');
+    patternsList.innerHTML = '';
 
-        // Grouper par catégorie
-        const grouped = patterns.reduce((acc, p) => {
-            if (!acc[p.category]) acc[p.category] = [];
-            acc[p.category].push(p);
-            return acc;
-        }, {});
+    // Grouper par catégorie
+    const grouped = patterns.reduce((acc, p) => {
+        if (!acc[p.category]) acc[p.category] = [];
+        acc[p.category].push(p);
+        return acc;
+    }, {});
 
-        Object.entries(grouped).forEach(([category, items]) => {
-            const section = document.createElement('div');
-            section.className = 'pattern-item';
-            section.innerHTML = `
+    Object.entries(grouped).forEach(([category, items]) => {
+        const section = document.createElement('div');
+        section.className = 'pattern-item';
+        section.innerHTML = `
       <div class="pattern-name">${formatCategory(category)}</div>
       <div class="pattern-details">
         ${items.map(i => `• ${i.name} (×${i.count})`).join('<br>')}
       </div>
     `;
-            patternsList.appendChild(section);
+        patternsList.appendChild(section);
+    });
+}
+
+function getScoreColor(score) {
+    if (score < 30) return '#10b981';
+    if (score < 60) return '#fbbf24';
+    return '#ef4444';
+}
+
+function formatCategory(category) {
+    const names = {
+        linguistic: 'Linguistique',
+        code_structure: 'Structure du Code',
+        naming: 'Nommage',
+        error_handling: 'Gestion d\'erreurs',
+        documentation: 'Documentation',
+        special_chars: 'Caractères Spéciaux',
+        vocabulary: 'Vocabulaire',
+        human_markers: 'Marqueurs Humains'
+    };
+    return names[category] || category;
+}
+
+/**
+ * Gestion des onglets
+ */
+function initTabs() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetTab = btn.dataset.tab;
+
+            // Désactiver tous les onglets
+            tabBtns.forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            // Activer l'onglet sélectionné
+            btn.classList.add('active');
+            document.getElementById(`tab-${targetTab}`).classList.add('active');
         });
-    }
-
-    function getScoreColor(score) {
-        if (score < 30) return '#10b981';
-        if (score < 60) return '#fbbf24';
-        return '#ef4444';
-    }
-
-    function formatCategory(category) {
-        const names = {
-            linguistic: 'Linguistique',
-            code_structure: 'Structure du Code',
-            naming: 'Nommage',
-            error_handling: 'Gestion d\'erreurs',
-            documentation: 'Documentation',
-            special_chars: 'Caractères Spéciaux',
-            vocabulary: 'Vocabulaire',
-            human_markers: 'Marqueurs Humains'
-        };
-        return names[category] || category;
-    }
-
-    /**
-     * Gestion des onglets
-     */
-    function initTabs() {
-        const tabBtns = document.querySelectorAll('.tab-btn');
-
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetTab = btn.dataset.tab;
-
-                // Désactiver tous les onglets
-                tabBtns.forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
-                // Activer l'onglet sélectionné
-                btn.classList.add('active');
-                document.getElementById(`tab-${targetTab}`).classList.add('active');
-            });
-        });
-    }
+    });
+}
