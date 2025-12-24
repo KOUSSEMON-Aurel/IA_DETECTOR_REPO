@@ -439,8 +439,7 @@ async function scanRepositoryMode(url) {
         }
     }
 }
-    }
-}
+
 
 /**
  * Mode File (Réel)
