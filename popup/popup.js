@@ -40,6 +40,7 @@ const saveSettingsBtn = document.getElementById('save-settings-btn');
 const githubTokenInput = document.getElementById('github-token');
 const modalLangSelect = document.getElementById('modal-lang-select');
 const modalThemeToggle = document.getElementById('modal-theme-toggle');
+const settingsAlert = document.getElementById('settings-alert');
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', async () => {
@@ -109,7 +110,7 @@ function initSettings() {
 }
 
 function toggleTheme() {
-    const currentTheme = document.body.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    const currentTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
 
     applyTheme(newTheme);
@@ -119,8 +120,10 @@ function toggleTheme() {
 
 function applyTheme(theme) {
     if (theme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
         document.body.setAttribute('data-theme', 'light');
     } else {
+        document.documentElement.removeAttribute('data-theme');
         document.body.removeAttribute('data-theme');
     }
 }
@@ -136,6 +139,11 @@ function updateThemeUI(theme) {
 }
 
 function openSettings(errorMsg = null) {
+    // If called by event listener, errorMsg is an Event object
+    if (errorMsg && typeof errorMsg !== 'string') {
+        errorMsg = null;
+    }
+
     // Sync inputs
     if (modalLangSelect) modalLangSelect.value = getCurrentLang();
 

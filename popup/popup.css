@@ -33,7 +33,7 @@
     --backdrop-blur: blur(12px);
 }
 
-[data-theme="light"] {
+html[data-theme="light"] {
     /* Base Colors - Light Mode */
     --bg-primary: #ffffff;
     --bg-secondary: #f3f4f6;
@@ -46,7 +46,7 @@
     --text-primary: #111827;
     /* Gray 900 */
     --text-secondary: #4b5563;
-    /* Gray 600 - Much darker for readability */
+    /* Gray 600 */
     --text-muted: #6b7280;
     /* Gray 500 */
 
@@ -58,13 +58,34 @@
     --accent-secondary: #7c3aed;
     --accent-gradient: linear-gradient(135deg, #2563eb, #7c3aed);
     --accent-glow: rgba(37, 99, 235, 0.15);
-    /* More subtle glow */
 
     /* Effects */
     --glass-bg: rgba(255, 255, 255, 0.95);
-    /* Almost opaque for readability */
     --glass-border: rgba(0, 0, 0, 0.08);
-    /* Stronger border definition */
+}
+
+html[data-theme="light"] .modal-content {
+    background-color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    /* Soft shadow instead of border */
+}
+
+html[data-theme="light"] .modal-header {
+    border-bottom: 1px solid #f3f4f6 !important;
+    /* Very subtle or none */
+}
+
+html[data-theme="light"] .separator {
+    background-color: #f3f4f6 !important;
+}
+
+html[data-theme="light"] .settings-input,
+html[data-theme="light"] .settings-select,
+html[data-theme="light"] .theme-switch-btn {
+    background-color: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    color: #111827 !important;
 }
 
 * {
@@ -73,8 +94,16 @@
     box-sizing: border-box;
 }
 
+input,
+button,
+select,
+textarea,
+option {
+    font-family: inherit;
+}
+
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Sans CJK SC', 'Noto Sans CJK JP', 'Microsoft YaHei', 'SimHei', 'WenQuanYi Micro Hei';
     background: var(--bg-primary);
     color: var(--text-primary);
     width: 420px;
