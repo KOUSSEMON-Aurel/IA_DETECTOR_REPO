@@ -952,6 +952,127 @@ function displayResults(results) {
     document.getElementById('stat-uncertain').innerText = dQuestionable;
     document.getElementById('stat-ai').innerText = dSuspicious;
 
+    // --- NEW: UPDATE OVERVIEW CHARTS ---
+    if (results.results) {
+        // 1. Donut Chart (Score Distribution)
+        const buckets = { '0-20': 0, '20-40': 0, '40-60': 0, '60-80': 0, '80-100': 0 };
+        results.results.forEach(f => {
+            const s = f.score;
+            if (s < 20) buckets['0-20']++;
+            else if (s < 40) buckets['20-40']++;
+            else if (s < 60) buckets['40-60']++;
+            else if (s < 80) buckets['60-80']++;
+            else buckets['80-100']++;
+        });
+
+        const total = results.results.length || 1;
+        let conicStr = 'conic-gradient(';
+        let currentDeg = 0;
+        const colors = {
+            '0-20': '#22c55e', // Green
+            '20-40': '#84cc16', // Lime
+            '40-60': '#eab308', // Yellow
+            '60-80': '#f97316', // Orange
+            '80-100': '#ef4444' // Red
+        };
+
+        const legendHtml = Object.entries(buckets).map(([range, count], idx) => {
+            const pct = count / total;
+            const deg = pct * 360;
+            const startStr = `${currentDeg}deg`;
+            currentDeg += deg;
+            const endStr = `${currentDeg}deg`;
+            conicStr += `${colors[range]} ${startStr} ${endStr},`;
+
+            return `
+                <div class="legend-item">
+                    <div class="legend-dot" style="background:${colors[range]}"></div>
+                    <div class="legend-label">${range}</div>
+                    <div class="legend-val">${count}</div>
+                </div>
+            `;
+        }).join('');
+
+        // Remove trailing comma and close parens
+        conicStr = conicStr.slice(0, -1) + ')';
+
+        const donutEl = document.getElementById('score-donut');
+        const donutLegendEl = document.getElementById('donut-legend');
+
+        if (donutEl) donutEl.style.background = conicStr;
+        if (donutLegendEl) donutLegendEl.innerHTML = legendHtml;
+
+
+        // 2. Bar Chart (Dimensions)
+        // Compute averages
+        const sums = { linguistic: 0, documentation: 0, cognitive: 0, structure: 0 };
+        results.results.forEach(f => {
+            sums.linguistic += f.breakdown?.linguistic || 0;
+            sums.documentation += f.breakdown?.documentation || 0;
+            sums.cognitive += f.breakdown?.cognitive || 0;
+            sums.structure += f.breakdown?.structure || 0;
+        });
+
+        const barContainer = document.getElementById('dimension-bars');
+        if (barContainer) {
+            barContainer.innerHTML = Object.entries(sums).map(([key, sum]) => {
+                const avg = Math.round(sum / total);
+                // Color per bar or uniform? Let's use purple gradient or uniform purple
+                return `
+                    <div class="bar-column">
+                        <div class="bar-track">
+                            <div class="bar-fill" style="height: ${avg}%; background-color: #a78bfa;"></div>
+                        </div>
+                        <span class="bar-label">${key.substring(0, 4)}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 3. Most Detected Patterns (Overview)
+        // Use dimensions breakdown logic from Patterns tab (dims) but simplified
+        // Actually, user wants "Most Detected Patterns" - could be the top patterns list
+        // Let's use the helper we built for patterns tab but here we just list top 4 dimensions
+
+        const patternContainer = document.getElementById('overview-patterns-list');
+        if (patternContainer) {
+            const dimsOv = [
+                { id: 'temporal', label: 'Analyse Temporelle', key: 'temporal' },
+                { id: 'linguistic', label: 'Patterns Linguistiques', key: 'linguistic' },
+                { id: 'naming', label: 'Nommage des Variables', key: 'naming' },
+                { id: 'documentation', label: 'Sur-documentation', key: 'documentation' }
+            ];
+
+            // Compute values same as Patterns tab
+            const items = dimsOv.map((d, i) => {
+                let percentage = 0;
+                if (d.id === 'temporal') {
+                    percentage = results.temporal?.score || 0;
+                } else {
+                    const affected = results.results.filter(f => (f.breakdown?.[d.key] || 0) > 40).length;
+                    percentage = Math.round((affected / total) * 100);
+                }
+
+                return { label: d.label, pct: percentage, rank: i + 1, countStr: `${percentage}%` };
+            }).sort((a, b) => b.pct - a.pct); // Sort by prevalence
+
+            patternContainer.innerHTML = items.map(item => `
+                <div class="overview-pattern-item">
+                    <div class="op-header">
+                        <div>
+                            <span class="op-rank">${item.rank}</span>
+                            ${item.label}
+                        </div>
+                        <span class="op-count">${item.countStr}</span>
+                    </div>
+                    <div class="op-progress-bg">
+                        <div class="op-progress-bar" style="width: ${item.pct}%"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+
     // Update Temporal Tab Visibility & Content
     const tabTemporalBtn = document.getElementById('tab-temporal-btn');
     const temporalContent = document.getElementById('temporal-content');
@@ -1064,29 +1185,7 @@ function displayResults(results) {
         });
     }
 
-    results = {
-        score: report.summary.globalScore,
-        confidence: report.summary.confidence === 'high' ? 90 : report.summary.confidence === 'medium' ? 60 : 30, // Hack
-        verdict: report.summary.verdict,
-        summary: {
-            human: report.distribution.clean,
-            uncertain: report.distribution.questionable,
-            aiLikely: report.distribution.suspicious
-        },
-        results: report.files.suspicious.concat(report.files.clean).map(f => ({
-            path: f.path,
-            score: f.finalScore,
-            lineCount: f.lineCount,
-            breakdown: f.breakdown // Pass breakdown for UI stats
-        })),
-        patterns: report.topPatterns,
-        totalFiles: report.summary.fileCount,
-        temporal: report.temporal
-    };
 
-    // ... (rest of function until displayResults)
-
-    // ... inside displayResults ...
 
     // Update Patterns Tab (Dimensions Breakdown)
     const patternsList = document.getElementById('patterns-list');
