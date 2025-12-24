@@ -585,7 +585,7 @@ function parseGitHubUrlWithFile(url) {
     }
     return null;
 }
-}
+
 
 /**
  * Affichage
