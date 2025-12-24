@@ -1,0 +1,560 @@
+/**
+ * Logique du popup
+ */
+
+import { scanRepository } from '../scanners/repo-scanner.js';
+import { scanFile } from '../scanners/file-scanner.js';
+import { scanFolder } from '../scanners/folder-scanner.js';
+
+// État de l'application
+let currentMode = 'repo';
+let currentResults = null;
+
+// Éléments DOM
+const urlInputSection = document.getElementById('url-input-section');
+const loadingSection = document.getElementById('loading-section');
+const resultsSection = document.getElementById('results-section');
+const scanButton = document.getElementById('scan-button');
+const repoUrlInput = document.getElementById('repo-url');
+
+/**
+ * Logique du File Picker
+ */
+import { getRepoTree } from '../api/github-client.js';
+
+const browseBtn = document.getElementById('browse-btn');
+const modal = document.getElementById('file-picker-modal');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const fileTreeContainer = document.getElementById('file-tree-container');
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', async () => {
+    initModeSwitching();
+    initScanButton();
+    initTabs();
+    initFilePicker();
+    initSettings(); // Nouveau
+
+    // Charger l'état ou initialiser
+    await loadState();
+});
+
+/**
+ * Gestion des modes de scan
+ */
+function initModeSwitching() {
+    const modeBtns = document.querySelectorAll('.mode-btn');
+
+    modeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            modeBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentMode = btn.dataset.mode;
+            updateUIForMode();
+            saveState(); // Sauvegarder changement de mode
+        });
+    });
+}
+
+function updateUIForMode() {
+    const placeholder = {
+        repo: 'https://github.com/user/repo',
+        file: 'URL du fichier GitHub',
+        folder: 'https://github.com/user/repo/tree/main/src'
+    };
+
+    repoUrlInput.placeholder = placeholder[currentMode];
+
+    // Gérer la visibilité du bouton Parcourir
+    if (currentMode === 'file' || currentMode === 'folder') {
+        browseBtn.style.display = 'flex';
+        browseBtn.classList.remove('hidden');
+    } else {
+        browseBtn.style.display = 'none';
+        browseBtn.classList.add('hidden');
+    }
+
+    // Mettre à jour visuellement les boutons de mode
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        if (btn.dataset.mode === currentMode) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
+// Initialiser le picker
+function initFilePicker() {
+    browseBtn.addEventListener('click', openFilePicker);
+    closeModalBtn.addEventListener('click', closeFilePicker);
+
+    // Fermer si clic en dehors
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeFilePicker();
+    });
+}
+
+async function openFilePicker() {
+    const url = repoUrlInput.value.trim();
+    if (!url) {
+        alert("Veuillez d'abord entrer l'URL du dépôt");
+        return;
+    }
+
+    modal.classList.remove('hidden');
+    fileTreeContainer.innerHTML = '<div class="loading-spinner"></div><div style="text-align:center; color: var(--text-secondary); margin-top: 10px;">Chargement de l\'arbre...</div>';
+
+    try {
+        const tree = await fetchRepoTree(url);
+        renderFileTree(tree);
+    } catch (error) {
+        fileTreeContainer.innerHTML = `
+            <div style="color: var(--error-color); text-align: center; padding: 20px;">
+                <p>Erreur: ${error.message}</p>
+                ${error.message.includes('403') ? '<p style="font-size: 12px; margin-top: 10px;">⚠️ Limite API atteinte. Réessayez plus tard ou configurez un token.</p>' : ''}
+            </div>
+        `;
+    }
+}
+
+function closeFilePicker() {
+    modal.classList.add('hidden');
+}
+
+// Cache simple pour l'arbre
+let cachedTree = null;
+let cachedTreeUrl = null;
+
+async function fetchRepoTree(url) {
+    const repoBase = getRepoBase(url); // implémenté plus haut
+    if (!repoBase) throw new Error("URL invalide");
+
+    if (cachedTree && cachedTreeUrl === repoBase) {
+        return cachedTree;
+    }
+
+    // Récupérer le token
+    const token = await getStoredToken();
+
+    // Appel à l'API (via github-client ou gitlab-client)
+    const tree = await getRepoTree(url, token);
+
+    cachedTree = tree;
+    cachedTreeUrl = repoBase;
+    return tree;
+}
+
+function renderFileTree(tree) {
+    fileTreeContainer.innerHTML = '';
+
+    // Trier: Dossiers d'abord, puis fichiers
+    const sorted = tree.sort((a, b) => {
+        if (a.type === b.type) return a.path.localeCompare(b.path);
+        return a.type === 'tree' ? -1 : 1; // 'tree' comes before 'blob'
+    });
+
+    // Pour éviter d'afficher 10000 fichiers, on affiche juste la racine ou une structure simplifiée
+    // Ici on affiche une liste plate filtrable pour simplifier l'UX dans un premier temps
+
+    const list = document.createElement('div');
+
+    // Input de filtre
+    const filterInput = document.createElement('input');
+    filterInput.type = 'text';
+    filterInput.placeholder = 'Filtrer...';
+    filterInput.style.width = '100%';
+    filterInput.style.marginBottom = '10px';
+    filterInput.style.padding = '8px';
+    filterInput.style.background = 'var(--bg-secondary)';
+    filterInput.style.border = '1px solid var(--border-color)';
+    filterInput.style.color = 'var(--text-primary)';
+    filterInput.style.borderRadius = '6px';
+
+    filterInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const items = list.querySelectorAll('.tree-item');
+        items.forEach(item => {
+            const path = item.dataset.path.toLowerCase();
+            item.style.display = path.includes(term) ? 'flex' : 'none';
+        });
+    });
+
+    fileTreeContainer.appendChild(filterInput);
+    fileTreeContainer.appendChild(list);
+
+    sorted.forEach(node => {
+        // Filtrer selon le mode
+        if (currentMode === 'folder' && node.type !== 'tree') return;
+
+        const el = document.createElement('div');
+        el.className = `tree-item ${node.type === 'tree' ? 'folder' : 'file'}`;
+        el.dataset.path = node.path;
+        el.innerHTML = `
+            <span>${node.type === 'tree' ? '📁' : '📄'}</span>
+            <span>${node.path}</span>
+        `;
+
+        el.addEventListener('click', () => {
+            selectPath(node.path);
+        });
+
+        list.appendChild(el);
+    });
+}
+
+function selectPath(path) {
+    // Reconstruire l'URL complète
+    // Base: github.com/user/repo
+    const repoBase = getRepoBase(repoUrlInput.value);
+    const platform = repoUrlInput.value.includes('gitlab.com') ? 'gitlab.com' : 'github.com';
+
+    let newUrl = '';
+    if (currentMode === 'file') {
+        newUrl = `https://${platform}/${repoBase}/blob/main/${path}`; // "main" est une supposition, idéalement on garde la branche
+    } else {
+        newUrl = `https://${platform}/${repoBase}/tree/main/${path}`;
+    }
+
+    repoUrlInput.value = newUrl;
+    saveState();
+    closeFilePicker();
+}
+
+
+/**
+ * Charge l'état sauvegardé ou initialise depuis l'onglet actuel
+ */
+async function loadState() {
+    try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const currentTabUrl = tab ? tab.url : '';
+
+        // Récupérer l'état stocké
+        const stored = await chrome.storage.local.get(['vibeState']);
+        const state = stored.vibeState;
+
+        // Est-ce qu'on est toujours sur le même repo ?
+        // On extrait la base du repo (github.com/user/repo) pour comparer
+        const currentRepoBase = getRepoBase(currentTabUrl);
+        const storedRepoBase = state ? getRepoBase(state.repoUrl) : null;
+
+        if (state && currentRepoBase && currentRepoBase === storedRepoBase) {
+            console.log('🔄 Restauration de la session précédente');
+
+            // 1. Restaurer URL et Mode
+            repoUrlInput.value = state.repoUrl || currentTabUrl;
+            currentMode = state.mode || 'repo';
+            updateUIForMode();
+
+            // 2. Restaurer Résultats
+            if (state.results) {
+                currentResults = state.results;
+                displayResults(currentResults);
+            }
+        } else {
+            console.log('🆕 Nouvelle session détectée');
+            // Nouvelle session : on prend l'URL de l'onglet
+            if (currentTabUrl && (currentTabUrl.includes('github.com') || currentTabUrl.includes('gitlab.com'))) {
+                repoUrlInput.value = currentTabUrl;
+            }
+            // Reset mode par défaut
+            currentMode = 'repo';
+            updateUIForMode();
+        }
+    } catch (error) {
+        console.error('Erreur chargement état:', error);
+    }
+}
+
+/**
+ * Sauvegarde l'état actuel
+ */
+function saveState() {
+    const state = {
+        repoUrl: repoUrlInput.value,
+        mode: currentMode,
+        results: currentResults,
+        timestamp: Date.now()
+    };
+    chrome.storage.local.set({ vibeState: state });
+}
+
+/**
+ * Extrait la base du repo (user/repo) pour comparaison
+ */
+function getRepoBase(url) {
+    if (!url) return null;
+    const match = url.match(/github\.com\/([^\/]+\/[^\/]+)/) || url.match(/gitlab\.com\/([^\/]+\/[^\/]+)/);
+    return match ? match[1] : null;
+}
+
+
+/**
+ * Bouton de scan
+ */
+function initScanButton() {
+    // Sauvegarder l'URL quand on tape
+    repoUrlInput.addEventListener('input', () => saveState());
+
+    scanButton.addEventListener('click', async () => {
+        const url = repoUrlInput.value.trim();
+
+        if (!url) {
+            alert('Veuillez entrer une URL');
+            return;
+        }
+
+        // Lancer le scan selon le mode
+        try {
+            showLoading();
+
+            if (currentMode === 'repo') {
+                await scanRepositoryMode(url);
+            } else if (currentMode === 'file') {
+                await scanFileMode(url);
+            } else if (currentMode === 'folder') {
+                await scanFolderMode(url);
+            }
+
+        } catch (error) {
+            hideLoading();
+            alert(`Erreur: ${error.message}`);
+            console.error('Erreur scan:', error);
+        }
+    });
+}
+
+/**
+ * Mode Repository
+ */
+async function scanRepositoryMode(url) {
+    const token = await getStoredToken();
+
+    // On passe le token via un objet options optionnel si scanRepository le supporte
+    // Voir scanRepository signature. Pour l'instant github-client functions prennent token.
+    // Il faut que repo-scanner accepte le token.
+    // Supposons qu'on modifie repo-scanner pour accepter un objet options en 3eme arg ou le modifier
+
+    // MODIFICATION NECESSAIRE DANS repo-scanner.js : 
+    // export async function scanRepository(url, progressCallback, options = {}) 
+
+    const results = await scanRepository(url, (progress) => {
+        updateProgress(progress);
+    }, { token }); // Changement ici
+
+    currentResults = results;
+    displayResults(results);
+    saveState(); // Persistance
+}
+
+/**
+ * Mode File (simplifié pour la démo)
+ */
+async function scanFileMode(url) {
+    // Pour l'instant, simulation
+    setTimeout(() => {
+        const mockResults = {
+            score: 75,
+            confidence: 80,
+            verdict: '⚠️ Probablement généré par IA',
+            patterns: [],
+            details: {}
+        };
+
+        currentResults = mockResults;
+        displayResults(mockResults);
+    }, 2000);
+}
+
+/**
+ * Mode Folder (simplifié)
+ */
+async function scanFolderMode(url) {
+    setTimeout(() => {
+        const mockResults = {
+            score: 65,
+            confidence: 75,
+            verdict: '❓ Possiblement IA ou code mixte',
+            patterns: [],
+            details: {}
+        };
+
+        currentResults = mockResults;
+        displayResults(mockResults);
+    }, 2000);
+}
+
+/**
+ * Affichage
+ */
+function showLoading() {
+    urlInputSection.classList.add('hidden');
+    loadingSection.classList.remove('hidden');
+    resultsSection.classList.add('hidden');
+}
+
+function hideLoading() {
+    loadingSection.classList.add('hidden');
+    urlInputSection.classList.remove('hidden');
+}
+
+function updateProgress(progress) {
+    const progressFill = document.getElementById('progress-fill');
+    const progressPercentage = document.getElementById('progress-percentage');
+    const loadingText = document.getElementById('loading-text');
+
+    if (progress.progress !== undefined) {
+        progressFill.style.width = `${progress.progress}%`;
+        progressPercentage.innerText = `${progress.progress}%`;
+    }
+
+    if (progress.stage) {
+        loadingText.innerText = progress.stage;
+    }
+}
+
+function displayResults(results) {
+    hideLoading();
+    resultsSection.classList.remove('hidden');
+
+    // Animer la jauge
+    animateScoreGauge(results.score || 0);
+
+    // Mettre à jour les infos
+    document.getElementById('score-number').innerText = results.score || 0;
+    document.getElementById('verdict-text').innerText = results.verdict || 'Analyse terminée';
+    document.getElementById('confidence-value').innerText = results.confidence || 0;
+    document.getElementById('files-count').innerText = results.totalFiles || 1;
+
+    // Stats
+    if (results.summary) {
+        document.getElementById('stat-human').innerText = results.summary.human || 0;
+        document.getElementById('stat-uncertain').innerText = results.summary.uncertain || 0;
+        document.getElementById('stat-ai').innerText = results.summary.aiLikely || 0;
+    }
+
+    // Hotspots
+    if (results.hotspots) {
+        displayHotspots(results.hotspots);
+    }
+
+    // File tree
+    if (results.results) {
+        displayFileTree(results.results);
+    }
+
+    // Patterns
+    if (results.patterns) {
+        displayPatterns(results.patterns);
+    }
+}
+
+function animateScoreGauge(score) {
+    const circle = document.getElementById('score-circle');
+    const circumference = 2 * Math.PI * 54; // r = 54
+    const offset = circumference - (score / 100) * circumference;
+
+    // Animation
+    setTimeout(() => {
+        circle.style.strokeDashoffset = offset;
+    }, 100);
+}
+
+function displayHotspots(hotspots) {
+    const hotspotsList = document.getElementById('hotspots-list');
+    hotspotsList.innerHTML = '';
+
+    hotspots.slice(0, 5).forEach(file => {
+        const item = document.createElement('div');
+        item.className = 'hotspot-item';
+        item.innerHTML = `
+      <span class="hotspot-name" title="${file.path}">${file.path.split('/').pop()}</span>
+      <span class="hotspot-score">${file.score}%</span>
+    `;
+        hotspotsList.appendChild(item);
+    });
+}
+
+function displayFileTree(files) {
+    const fileTree = document.getElementById('file-tree');
+    fileTree.innerHTML = '';
+
+    files.slice(0, 20).forEach(file => {
+        const item = document.createElement('div');
+        item.style.padding = '8px';
+        item.style.borderBottom = '1px solid var(--border-color)';
+        item.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 12px;">📄 ${file.path}</span>
+        <span style="font-weight: 700; color: ${getScoreColor(file.score)}">${file.score}%</span>
+      </div>
+    `;
+        fileTree.appendChild(item);
+    });
+}
+
+function displayPatterns(patterns) {
+    const patternsList = document.getElementById('patterns-list');
+    patternsList.innerHTML = '';
+
+    // Grouper par catégorie
+    const grouped = patterns.reduce((acc, p) => {
+        if (!acc[p.category]) acc[p.category] = [];
+        acc[p.category].push(p);
+        return acc;
+    }, {});
+
+    Object.entries(grouped).forEach(([category, items]) => {
+        const section = document.createElement('div');
+        section.className = 'pattern-item';
+        section.innerHTML = `
+      <div class="pattern-name">${formatCategory(category)}</div>
+      <div class="pattern-details">
+        ${items.map(i => `• ${i.name} (×${i.count})`).join('<br>')}
+      </div>
+    `;
+        patternsList.appendChild(section);
+    });
+}
+
+function getScoreColor(score) {
+    if (score < 30) return '#10b981';
+    if (score < 60) return '#fbbf24';
+    return '#ef4444';
+}
+
+function formatCategory(category) {
+    const names = {
+        linguistic: 'Linguistique',
+        code_structure: 'Structure du Code',
+        naming: 'Nommage',
+        error_handling: 'Gestion d\'erreurs',
+        documentation: 'Documentation',
+        special_chars: 'Caractères Spéciaux',
+        vocabulary: 'Vocabulaire',
+        human_markers: 'Marqueurs Humains'
+    };
+    return names[category] || category;
+}
+
+/**
+ * Gestion des onglets
+ */
+function initTabs() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetTab = btn.dataset.tab;
+
+            // Désactiver tous les onglets
+            tabBtns.forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            // Activer l'onglet sélectionné
+            btn.classList.add('active');
+            document.getElementById(`tab-${targetTab}`).classList.add('active');
+        });
+    });
+}

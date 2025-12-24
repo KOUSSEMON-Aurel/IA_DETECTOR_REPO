@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Coding Detector</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="popup.css">
+    <link rel="stylesheet" href="file-picker.css">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">🤖</span>
+                <h1>Vibe Detector</h1>
+            </div>
+            <div class="header-actions">
+                <button id="settings-btn" class="icon-btn-header" title="Paramètres">⚙️</button>
+                <div class="version">v1.0</div>
+            </div>
+        </header>
+
+        <!-- Mode Selection -->
+        <section class="mode-selection">
+            <h2>Mode de Scan</h2>
+            <div class="mode-buttons">
+                <button class="mode-btn active" data-mode="repo">
+                    <span class="icon">📦</span>
+                    Repository
+                </button>
+                <button class="mode-btn" data-mode="file">
+                    <span class="icon">📄</span>
+                    Fichier
+                </button>
+                <button class="mode-btn" data-mode="folder">
+                    <span class="icon">📁</span>
+                    Dossier
+                </button>
+            </div>
+        </section>
+
+        <!-- URL Input -->
+        <section class="url-input-section" id="url-input-section">
+            <div class="input-container">
+                <input type="text" id="repo-url" class="url-input" placeholder="https://github.com/user/repo">
+                <button id="browse-btn" class="browse-btn hidden" title="Parcourir les fichiers">
+                    📁
+                </button>
+            </div>
+
+            <button id="scan-button" class="scan-button">
+                <span class="scan-icon">🔍</span>
+                Lancer le Scan
+            </button>
+        </section>
+
+        <!-- Loading State -->
+        <section class="loading-section hidden" id="loading-section">
+            <div class="spinner"></div>
+            <p class="loading-text" id="loading-text">Initialisation...</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <p class="progress-percentage" id="progress-percentage">0%</p>
+        </section>
+
+        <!-- Results -->
+        <section class="results-section hidden" id="results-section">
+            <!-- Score Global -->
+            <div class="global-score">
+                <div class="score-gauge" id="score-gauge">
+                    <svg width="120" height="120" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r="54" fill="none" stroke="#2a2a2a" stroke-width="8" />
+                        <circle id="score-circle" cx="60" cy="60" r="54" fill="none" stroke="url(#scoreGradient)"
+                            stroke-width="8" stroke-dasharray="339.292" stroke-dashoffset="339.292"
+                            transform="rotate(-90 60 60)" stroke-linecap="round" />
+                        <defs>
+                            <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+                                <stop offset="50%" style="stop-color:#fbbf24;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#ef4444;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="score-value">
+                        <span id="score-number">0</span>%
+                    </div>
+                </div>
+                <div class="score-info">
+                    <h3 id="verdict-text">En attente...</h3>
+                    <p class="confidence">Confiance: <span id="confidence-value">0</span>%</p>
+                    <p class="files-analyzed">Fichiers analysés: <span id="files-count">0</span></p>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="overview">Vue d'ensemble</button>
+                <button class="tab-btn" data-tab="files">Fichiers</button>
+                <button class="tab-btn" data-tab="patterns">Patterns</button>
+            </div>
+
+            <!-- Tab Content: Overview -->
+            <div class="tab-content active" id="tab-overview">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-icon">✅</span>
+                        <div class="stat-info">
+                            <p class="stat-label">Humain</p>
+                            <p class="stat-value" id="stat-human">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-icon">❓</span>
+                        <div class="stat-info">
+                            <p class="stat-label">Incertain</p>
+                            <p class="stat-value" id="stat-uncertain">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-icon">🤖</span>
+                        <div class="stat-info">
+                            <p class="stat-label">IA Probable</p>
+                            <p class="stat-value" id="stat-ai">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hotspots">
+                    <h4>🔥 Fichiers les plus suspects</h4>
+                    <div id="hotspots-list" class="hotspots-list"></div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Files -->
+            <div class="tab-content" id="tab-files">
+                <div class="file-tree" id="file-tree"></div>
+            </div>
+
+            <!-- Tab Content: Patterns -->
+            <div class="tab-content" id="tab-patterns">
+                <div class="patterns-list" id="patterns-list"></div>
+            </div>
+        </section>
+    </div>
+    <!-- File Picker Modal -->
+    <div id="file-picker-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Sélectionner un fichier</h3>
+                <button id="close-modal-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="file-tree-container" class="file-tree-container">
+                    <!-- Tree will be injected here -->
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content settings-content">
+            <div class="modal-header">
+                <h3>Paramètres</h3>
+                <button id="close-settings-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-group">
+                    <label for="github-token">Token GitHub (Optionnel)</label>
+                    <p class="settings-desc">Ajoutez un token pour augmenter la limite d'appels API (5000/heure au lieu
+                        de 60).</p>
+                    <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                        class="settings-input">
+                    <p class="settings-help">
+                        <a href="https://github.com/settings/tokens/new?scopes=repo&description=VibeCodingDetector"
+                            target="_blank">Créer un token ici</a> (Scope 'repo' recommandé pour les dépôts privés)
+                    </p>
+                </div>
+                <div class="settings-actions">
+                    <button id="save-settings-btn" class="primary-btn">Sauvegarder</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="popup.js"></script>
+</body>
+
+</html>

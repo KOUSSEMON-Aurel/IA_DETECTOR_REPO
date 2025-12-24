@@ -1,0 +1,7 @@
+/* Style pour le bouton injecté dans les pages */
+
+#vibe-detector-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+    transition: all 0.2s ease;
+}
