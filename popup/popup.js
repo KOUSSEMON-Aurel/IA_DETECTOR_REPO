@@ -1,4 +1,3 @@
-```javascript
 /**
  * Logique du popup
  */
@@ -229,7 +228,7 @@ async function openFilePicker() {
         fileTreeContainer.innerHTML = `
     < div style = "color: var(--error-color); text-align: center; padding: 20px;" >
         <p>Erreur: ${error.message}</p>
-                ${ error.message.includes('403') ? '<p style="font-size: 12px; margin-top: 10px;">⚠️ Limite API atteinte. Réessayez plus tard ou configurez un token.</p>' : '' }
+                ${error.message.includes('403') ? '<p style="font-size: 12px; margin-top: 10px;">⚠️ Limite API atteinte. Réessayez plus tard ou configurez un token.</p>' : ''}
             </div >
     `;
     }
@@ -305,10 +304,10 @@ function renderFileTree(tree) {
         if (currentMode === 'folder' && node.type !== 'tree') return;
 
         const el = document.createElement('div');
-        el.className = `tree - item ${ node.type === 'tree' ? 'folder' : 'file' } `;
+        el.className = `tree - item ${node.type === 'tree' ? 'folder' : 'file'} `;
         el.dataset.path = node.path;
         el.innerHTML = `
-    < span > ${ node.type === 'tree' ? '📁' : '📄' }</span >
+    < span > ${node.type === 'tree' ? '📁' : '📄'}</span >
         <span>${node.path}</span>
 `;
 
@@ -330,12 +329,12 @@ function selectPath(path) {
     if (currentMode === 'file') {
         newUrl = `https://${platform}/${repoBase}/blob/main/${path}`; // "main" est une supposition, idéalement on garde la branche
     } else {
-    newUrl = `https://${platform}/${repoBase}/tree/main/${path}`;
-}
+        newUrl = `https://${platform}/${repoBase}/tree/main/${path}`;
+    }
 
-repoUrlInput.value = newUrl;
-saveState();
-closeFilePicker();
+    repoUrlInput.value = newUrl;
+    saveState();
+    closeFilePicker();
 }
 
 
@@ -668,8 +667,21 @@ function displayResults(results) {
     animateScoreGauge(results.score || 0);
 
     // Mettre à jour les infos
+    // Mettre à jour les infos
     document.getElementById('score-number').innerText = results.score || 0;
-    document.getElementById('verdict-text').innerText = results.verdict || 'Analyse terminée';
+
+    // Traduire le verdict
+    const verdictMap = {
+        '✅ Probablement code humain': 'verdict_human',
+        '🤖 Très probablement généré par IA': 'verdict_ai_very',
+        '⚠️ Probablement généré par IA': 'verdict_ai',
+        '❓ Possiblement IA ou code mixte': 'verdict_mixed',
+        '❓ Mix probable IA/Humain': 'verdict_mixed',
+        '🤷 Incertain - pas assez de signaux': 'verdict_uncertain'
+    };
+    const translatedVerdict = t(verdictMap[results.verdict] || 'verdict_waiting');
+    document.getElementById('verdict-text').innerText = translatedVerdict;
+
     document.getElementById('confidence-value').innerText = results.confidence || 0;
     document.getElementById('files-count').innerText = results.totalFiles || 1;
 
@@ -787,17 +799,17 @@ function getScoreColor(score) {
 }
 
 function formatCategory(category) {
-    const names = {
-        linguistic: 'Linguistique',
-        code_structure: 'Structure du Code',
-        naming: 'Nommage',
-        error_handling: 'Gestion d\'erreurs',
-        documentation: 'Documentation',
-        special_chars: 'Caractères Spéciaux',
-        vocabulary: 'Vocabulaire',
-        human_markers: 'Marqueurs Humains'
+    const keyMap = {
+        linguistic: 'cat_linguistic',
+        code_structure: 'cat_structure',
+        naming: 'cat_naming',
+        error_handling: 'cat_error',
+        documentation: 'cat_doc',
+        special_chars: 'cat_special',
+        vocabulary: 'cat_vocab',
+        human_markers: 'cat_human'
     };
-    return names[category] || category;
+    return t(keyMap[category]) || category;
 }
 
 /**
