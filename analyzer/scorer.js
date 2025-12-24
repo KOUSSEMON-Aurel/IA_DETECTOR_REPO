@@ -210,7 +210,7 @@ function calculateConfidence(patternResults, formatterInfo, context) {
 /**
  * Génère le verdict basé sur score et confiance
  */
-function getVerdict(score, confidence) {
+export function getVerdict(score, confidence) {
     const thresholds = CONFIG.THRESHOLDS;
 
     if (confidence < 50) {
