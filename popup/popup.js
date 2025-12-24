@@ -438,150 +438,154 @@ async function scanRepositoryMode(url) {
             alert(`Erreur lors du scan : ${error.message}`);
         }
     }
-    /**
-     * Mode File (Réel)
-     */
-    async function scanFileMode(url) {
-        const token = await getStoredToken();
-        const repoInfo = parseGitHubUrlWithFile(url);
+}
+    }
+}
 
-        if (!repoInfo || !repoInfo.path) {
-            alert("URL de fichier invalide. Utilisez le format: github.com/user/repo/blob/main/path/to/file");
-            return;
-        }
+/**
+ * Mode File (Réel)
+ */
+async function scanFileMode(url) {
+    const token = await getStoredToken();
+    const repoInfo = parseGitHubUrlWithFile(url);
 
-        try {
-            showLoading();
-            updateProgress({ stage: 'Téléchargement fichier...', progress: 30 });
-
-            // 1. Récupérer contenu
-            // Note: On doit importer getFileContent de github-client si pas déjà fait dans popup.js
-            // Mais github-client est importé comme module 'getRepoTree'. Il faut ajuster les imports en haut.
-            // Supposons qu'on a accès à githubClient
-
-            // Hack temporaire si imports manquants: on utilise repo-scanner qui a tout
-            // Mais mieux : on complète l'import en haut (voir étape suivante)
-
-            const content = await githubClient.getFileContent(repoInfo.owner, repoInfo.repo, repoInfo.path, token);
-
-            if (!content) throw new Error("Impossible de lire le fichier (404 ou vide)");
-
-            updateProgress({ stage: 'Analyse...', progress: 60 });
-
-            // 2. Analyser
-            const results = analyzeFile(content, { platform: 'github' });
-
-            updateProgress({ stage: 'Terminé', progress: 100 });
-
-            // Adapter format résultats pour displayResults
-            const formattedResults = {
-                score: results.score,
-                confidence: results.confidence,
-                verdict: results.verdict,
-                summary: {
-                    human: 0, // Pas pertinent pour un seul fichier
-                    uncertain: 0,
-                    aiLikely: 0
-                },
-                patterns: results.patterns,
-                details: results.details,
-                totalFiles: 1
-            };
-
-            currentResults = formattedResults;
-            displayResults(formattedResults);
-            saveState();
-
-        } catch (error) {
-            console.error(error);
-            alert("Erreur scan fichier: " + error.message);
-            hideLoading();
-        }
+    if (!repoInfo || !repoInfo.path) {
+        alert("URL de fichier invalide. Utilisez le format: github.com/user/repo/blob/main/path/to/file");
+        return;
     }
 
-    /**
-     * Mode Folder (Réel)
-     */
-    async function scanFolderMode(url) {
-        const token = await getStoredToken();
-        const repoInfo = parseGitHubUrlWithFile(url); // Gère aussi les tree/x/folder
+    try {
+        showLoading();
+        updateProgress({ stage: 'Téléchargement fichier...', progress: 30 });
 
-        if (!repoInfo || !repoInfo.path) {
-            alert("URL de dossier invalide. Utilisez le format: github.com/user/repo/tree/main/folder");
-            return;
-        }
+        // 1. Récupérer contenu
+        // Note: On doit importer getFileContent de github-client si pas déjà fait dans popup.js
+        // Mais github-client est importé comme module 'getRepoTree'. Il faut ajuster les imports en haut.
+        // Supposons qu'on a accès à githubClient
 
-        try {
-            showLoading();
+        // Hack temporaire si imports manquants: on utilise repo-scanner qui a tout
+        // Mais mieux : on complète l'import en haut (voir étape suivante)
 
-            // On réutilise scanGitHubRepository mais on filtre ? 
-            // C'est plus simple de réimplémenter une logique légère ici pour le dossier
+        const content = await githubClient.getFileContent(repoInfo.owner, repoInfo.repo, repoInfo.path, token);
 
-            updateProgress({ stage: 'Analyse arborescence...', progress: 10 });
+        if (!content) throw new Error("Impossible de lire le fichier (404 ou vide)");
 
-            const tree = await getRepoTree(`https://github.com/${repoInfo.owner}/${repoInfo.repo}`, token);
+        updateProgress({ stage: 'Analyse...', progress: 60 });
 
-            // Filtrer fichiers du dossier
-            const folderFiles = tree.filter(f => f.path.startsWith(repoInfo.path));
+        // 2. Analyser
+        const results = analyzeFile(content, { platform: 'github' });
 
-            if (folderFiles.length === 0) {
-                throw new Error("Dossier vide ou introuvable");
-            }
+        updateProgress({ stage: 'Terminé', progress: 100 });
 
-            updateProgress({ stage: `Téléchargement ${folderFiles.length} fichiers...`, progress: 30 });
+        // Adapter format résultats pour displayResults
+        const formattedResults = {
+            score: results.score,
+            confidence: results.confidence,
+            verdict: results.verdict,
+            summary: {
+                human: 0, // Pas pertinent pour un seul fichier
+                uncertain: 0,
+                aiLikely: 0
+            },
+            patterns: results.patterns,
+            details: results.details,
+            totalFiles: 1
+        };
 
-            // Télécharger contenu (limité à 20 fichiers pour perf dossier ?)
-            const maxFiles = 50;
-            const limitedFiles = folderFiles.slice(0, maxFiles);
+        currentResults = formattedResults;
+        displayResults(formattedResults);
+        saveState();
 
-            const filesWithContent = await githubClient.getMultipleFileContents(repoInfo.owner, repoInfo.repo, limitedFiles, token);
+    } catch (error) {
+        console.error(error);
+        alert("Erreur scan fichier: " + error.message);
+        hideLoading();
+    }
+}
 
-            updateProgress({ stage: 'Analyse...', progress: 70 });
+/**
+ * Mode Folder (Réel)
+ */
+async function scanFolderMode(url) {
+    const token = await getStoredToken();
+    const repoInfo = parseGitHubUrlWithFile(url); // Gère aussi les tree/x/folder
 
-            const results = analyzeRepository(filesWithContent, { root: repoInfo.repo });
-
-            updateProgress({ stage: 'Terminé', progress: 100 });
-
-            const final = {
-                score: results.score, // Corrigé précédemment (était globalScore)
-                confidence: results.confidence,
-                verdict: getVerdict(results.score, results.confidence), // Besoin import getVerdict ou le récupérer de results si dispo
-                summary: results.summary || {},
-                patterns: [], // Agrégation complexe, on laisse vide ou on prend le top
-                results: results.results, // Pour le file tree
-                totalFiles: filesWithContent.length
-            };
-
-            currentResults = final;
-            displayResults(final);
-            saveState();
-
-        } catch (error) {
-            console.error(error);
-            if (error.message.includes('403')) {
-                openSettings("⚠️ Limite atteinte pour ce dossier.");
-            } else {
-                alert("Erreur scan dossier: " + error.message);
-            }
-            hideLoading();
-        }
+    if (!repoInfo || !repoInfo.path) {
+        alert("URL de dossier invalide. Utilisez le format: github.com/user/repo/tree/main/folder");
+        return;
     }
 
-    // Helper pour parser URL fichier/dossier
-    function parseGitHubUrlWithFile(url) {
-        // Match github.com/user/repo/blob/branch/path...
-        // ou github.com/user/repo/tree/branch/path...
-        const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/(blob|tree)\/[^\/]+\/(.+)/);
-        if (match) {
-            return {
-                owner: match[1],
-                repo: match[2],
-                type: match[3],
-                path: match[4]
-            };
+    try {
+        showLoading();
+
+        // On réutilise scanGitHubRepository mais on filtre ? 
+        // C'est plus simple de réimplémenter une logique légère ici pour le dossier
+
+        updateProgress({ stage: 'Analyse arborescence...', progress: 10 });
+
+        const tree = await getRepoTree(`https://github.com/${repoInfo.owner}/${repoInfo.repo}`, token);
+
+        // Filtrer fichiers du dossier
+        const folderFiles = tree.filter(f => f.path.startsWith(repoInfo.path));
+
+        if (folderFiles.length === 0) {
+            throw new Error("Dossier vide ou introuvable");
         }
-        return null;
+
+        updateProgress({ stage: `Téléchargement ${folderFiles.length} fichiers...`, progress: 30 });
+
+        // Télécharger contenu (limité à 20 fichiers pour perf dossier ?)
+        const maxFiles = 50;
+        const limitedFiles = folderFiles.slice(0, maxFiles);
+
+        const filesWithContent = await githubClient.getMultipleFileContents(repoInfo.owner, repoInfo.repo, limitedFiles, token);
+
+        updateProgress({ stage: 'Analyse...', progress: 70 });
+
+        const results = analyzeRepository(filesWithContent, { root: repoInfo.repo });
+
+        updateProgress({ stage: 'Terminé', progress: 100 });
+
+        const final = {
+            score: results.score, // Corrigé précédemment (était globalScore)
+            confidence: results.confidence,
+            verdict: getVerdict(results.score, results.confidence), // Besoin import getVerdict ou le récupérer de results si dispo
+            summary: results.summary || {},
+            patterns: [], // Agrégation complexe, on laisse vide ou on prend le top
+            results: results.results, // Pour le file tree
+            totalFiles: filesWithContent.length
+        };
+
+        currentResults = final;
+        displayResults(final);
+        saveState();
+
+    } catch (error) {
+        console.error(error);
+        if (error.message.includes('403')) {
+            openSettings("⚠️ Limite atteinte pour ce dossier.");
+        } else {
+            alert("Erreur scan dossier: " + error.message);
+        }
+        hideLoading();
     }
+}
+
+// Helper pour parser URL fichier/dossier
+function parseGitHubUrlWithFile(url) {
+    // Match github.com/user/repo/blob/branch/path...
+    // ou github.com/user/repo/tree/branch/path...
+    const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/(blob|tree)\/[^\/]+\/(.+)/);
+    if (match) {
+        return {
+            owner: match[1],
+            repo: match[2],
+            type: match[3],
+            path: match[4]
+        };
+    }
+    return null;
+}
 }
 
 /**
