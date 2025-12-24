@@ -906,134 +906,239 @@ function displayResults(results) {
         '✅ Probablement code humain': 'verdict_human',
         '🤖 Très probablement généré par IA': 'verdict_ai_very',
         '⚠️ Probablement généré par IA': 'verdict_ai',
-        '❓ Possiblement IA ou code mixte': 'verdict_mixed',
-        '🤷 Incertain - pas assez de signaux': 'verdict_uncertain',
-
-        // V3 Strings (Exact matches from scorer.js)
-        '🤷 Analyse incertaine': 'verdict_uncertain',
-        '🤖 IA Quasi-Certaine': 'verdict_ai_very',
-        '⚠️ Probablement IA': 'verdict_ai',
-        '❓ Code Mixte / Assisté': 'verdict_mixed',
-        '✅ Code Humain': 'verdict_human',
-        '👤 Probablement Humain': 'verdict_human'
+        'clean': t('verdict_clean'),
+        'suspicious': t('verdict_suspicious'),
+        'uncertain': t('verdict_uncertain'),
+        'likely_ai': t('verdict_ai'),
+        // V3 verdicts
+        '🤖 IA Quasi-Certaine': t('verdict_ai_very'),
+        '⚠️ Probablement IA': t('verdict_ai'),
+        '❓ Code Mixte': t('verdict_mixed'),
+        '✅ Probablement Humain': t('verdict_human'),
+        '✅ Code Humain': t('verdict_human')
     };
-
-    // Fallback: If no match, use the raw string or "En attente" if empty
-    let translatedVerdict = t('verdict_waiting');
-
-    if (results.verdict) {
-        if (verdictMap[results.verdict]) {
-            translatedVerdict = t(verdictMap[results.verdict]);
-        } else {
-            // Use raw verdict if no translation key found (robustness)
-            translatedVerdict = results.verdict;
-        }
-    }
-
+    const translatedVerdict = verdictMap[results.verdict] || results.verdict;
     document.getElementById('verdict-text').innerText = translatedVerdict;
 
-    // Update Temporal Tab Visibility
+    // Confidence & Details (Header Stats)
+    const confidenceText = typeof results.confidence === 'number'
+        ? (results.confidence > 80 ? 'Élevée' : results.confidence > 50 ? 'Moyenne' : 'Faible')
+        : (results.confidence === 'high' ? 'Élevée' : results.confidence === 'medium' ? 'Moyenne' : 'Faible');
+
+    document.getElementById('confidence-value').innerText = confidenceText;
+    document.getElementById('files-count').innerText = results.totalFiles || 0;
+
+    // Distribution Stats (Overview Tab)
+    // On recalcule ou on utilise le summary s'il existe
+    let dSuspicious = 0, dQuestionable = 0, dClean = 0;
+
+    // Si V3 summary dispo
+    if (results.summary && results.summary.human !== undefined) {
+        dClean = results.summary.human;
+        dQuestionable = results.summary.uncertain;
+        dSuspicious = results.summary.aiLikely;
+    } else if (results.results) {
+        // Fallback calcul manuel depuis la liste
+        results.results.forEach(f => {
+            if (f.score >= 65) dSuspicious++;
+            else if (f.score >= 30) dQuestionable++;
+            else dClean++;
+        });
+    }
+
+    document.getElementById('stat-human').innerText = dClean;
+    document.getElementById('stat-uncertain').innerText = dQuestionable;
+    document.getElementById('stat-ai').innerText = dSuspicious;
+
+    // Update Temporal Tab Visibility & Content
     const tabTemporalBtn = document.getElementById('tab-temporal-btn');
     const temporalContent = document.getElementById('temporal-content');
 
     if (tabTemporalBtn && temporalContent) {
-        // Show tab if we have temporal data OR if it was explicitly a deep scan attempt (implied by content existing)
-        // We check if the object exists. Even if score is 0, it might convey "Not enough data".
-        if (results.temporal) {
+        if (results.temporal && (results.temporal.score > 0 || results.temporal.details || results.temporal.error || results.temporal.reason)) {
+            tabTemporalBtn.style.display = 'block';
             const tData = results.temporal;
 
-            // Hide if truly empty default (score 0, low confidence, no details, no error/reason) 
-            // typically default `let temporalResult = { score: 0, confidence: 'low', details: null };`
-            // But if we want to show it was SKIPPED or FAILED, we should check deeper.
-            // Let's rely on: if Deep Scan was ON, we want to see it. 
-            // Only hide if it looks like a purely V2 scan (details null and no specific reason).
+            let innerContent = '';
 
-            if (tData.score === 0 && !tData.details && !tData.reason && !tData.error) {
-                tabTemporalBtn.style.display = 'none';
+            if (tData.error) {
+                innerContent = `<div style="padding:15px; color:var(--error-color);">❌ Erreur analyse: ${tData.error}</div>`;
+            } else if (tData.reason) {
+                innerContent = `<div style="padding:15px; color:var(--text-secondary);">ℹ️ ${tData.reason}</div>`;
             } else {
-                tabTemporalBtn.style.display = 'block';
-
-                let innerContent = '';
-
-                if (tData.error) {
-                    innerContent = `<div style="padding:15px; color:var(--error-color);">❌ Erreur analyse: ${tData.error}</div>`;
-                } else if (tData.reason) {
-                    innerContent = `<div style="padding:15px; color:var(--text-secondary);">ℹ️ ${tData.reason}</div>`;
-                } else {
-                    // Normal display
-                    let detailsHtml = '';
-                    if (tData.breakdown) {
-                        detailsHtml = `
-                            <li>Régularité Commit: ${tData.breakdown.commitTiming}/100</li>
-                            <li>Variation Style: ${tData.breakdown.styleDrift}/100</li>
-                            <li>Changements Suspects: ${tData.breakdown.changePatterns || 0}/100</li>
-                          `;
-                    }
-
-                    const detailsObj = tData.details || {};
-                    const totalCommits = detailsObj.totalCommits || 0;
-                    const timeSpan = detailsObj.timeSpan || 'N/A';
-
-                    innerContent = `
-                        <div style="padding:15px; background:var(--bg-secondary); border-radius:8px; border:1px solid var(--border-color);">
-                            <h4 style="margin-top:0; display:flex; align-items:center; gap:8px;">
-                                <span style="font-size:1.2em">📅</span> Analyse Temporelle (Git History)
-                            </h4>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                                <div>
-                                    <p style="margin:5px 0; font-size:0.9em; color:var(--text-secondary);">Score Anomalie</p>
-                                    <span style="font-size:1.4em; font-weight:bold; color:${getScoreColor(tData.score)}">${tData.score}%</span>
-                                </div>
-                                <div style="text-align:right;">
-                                    <p style="margin:5px 0; font-size:0.9em; color:var(--text-secondary);">Confiance</p>
-                                    <span>${tData.confidence || 'Moyenne'}</span>
-                                </div>
-                            </div>
-                            <div style="background:var(--bg-tertiary); padding:10px; border-radius:6px;">
-                                <ul style="padding-left:20px; margin:0; font-size:0.9em; color:var(--text-primary);">
-                                    <li>Commits analysés: ${totalCommits}</li>
-                                    <li>Durée activité: ${timeSpan}</li>
-                                    ${detailsHtml}
-                                </ul>
-                            </div>
+                // GRID LAYOUT FOR TEMPORAL STATS
+                const details = tData.details || {};
+                const gridStats = `
+                    <div class="temporal-grid">
+                        <div class="stat-box">
+                            <span class="label">Total Commits</span>
+                            <span class="value">${details.totalCommits || 0}</span>
                         </div>
-                    `;
-                }
+                        <div class="stat-box">
+                            <span class="label">Durée</span>
+                            <span class="value">${details.timeSpan || 'N/A'}</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="label">Moy. / Jour</span>
+                            <span class="value">${details.avgCommitsPerDay || 0}</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="label">Heures Actives</span>
+                            <span class="value date">${details.mostActiveHours || 'N/A'}</span>
+                        </div>
+                    </div>
+                 `;
 
-                temporalContent.innerHTML = innerContent;
+                // SCORE BANNER
+                const scoreColor = getScoreColor(tData.score);
+                const scoreBanner = `
+                    <div class="temporal-banner" style="border-color: ${scoreColor}40; background: linear-gradient(90deg, ${scoreColor}10 0%, transparent 100%);">
+                        <div class="icon-warning" style="color: ${scoreColor}">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        </div>
+                        <div class="content">
+                            <div class="title" style="color: ${scoreColor}">Temporal Score: ${tData.score}/100</div>
+                            <div class="desc">L'analyse de l'historique Git révèle des patterns suspects.</div>
+                             ${tData.breakdown ? `<ul class="reasons">
+                                <li>Régularité: ${tData.breakdown.commitTiming}/100</li>
+                                <li>Style Drift: ${tData.breakdown.styleDrift}/100</li>
+                             </ul>` : ''}
+                        </div>
+                    </div>
+                 `;
+                innerContent = gridStats + scoreBanner;
             }
+            temporalContent.innerHTML = innerContent;
         } else {
             tabTemporalBtn.style.display = 'none';
         }
     }
 
-    document.getElementById('confidence-value').innerText = results.confidence || 0;
-    document.getElementById('files-count').innerText = results.totalFiles || 1;
+    // Update Files Tab (Categorized Lists)
+    const fileTree = document.getElementById('file-tree');
+    if (fileTree && results.results) {
+        // Separer les fichiers
+        const suspiciousFiles = [];
+        const questionableFiles = [];
+        const cleanFiles = [];
 
-    // Stats
-    if (results.summary) {
-        document.getElementById('stat-human').innerText = results.summary.human || 0;
-        document.getElementById('stat-uncertain').innerText = results.summary.uncertain || 0;
-        document.getElementById('stat-ai').innerText = results.summary.aiLikely || 0;
+        results.results.forEach(f => {
+            if (f.score >= 65) suspiciousFiles.push(f);
+            else if (f.score >= 30) questionableFiles.push(f);
+            else cleanFiles.push(f);
+        });
+
+        // Sort by score desc
+        suspiciousFiles.sort((a, b) => b.score - a.score);
+        questionableFiles.sort((a, b) => b.score - a.score);
+        cleanFiles.sort((a, b) => a.score - b.score);
+
+        let html = '';
+
+        if (suspiciousFiles.length > 0) {
+            html += generateFileCategoryBlock('🚨 Suspicious Files', suspiciousFiles, 'suspicious');
+        }
+        if (questionableFiles.length > 0) {
+            html += generateFileCategoryBlock('⚠️ Questionable Files', questionableFiles, 'questionable');
+        }
+        if (cleanFiles.length > 0) {
+            html += generateFileCategoryBlock('✅ Clean Files', cleanFiles, 'clean');
+        }
+
+        if (html === '') html = '<div style="padding:20px; text-align:center;">Aucun fichier analysé.</div>';
+
+        fileTree.innerHTML = html;
+
+        // Re-attach listeners for file clicks
+        document.querySelectorAll('.file-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const path = item.dataset.path;
+                const fileData = results.results.find(f => f.path === path);
+                if (fileData) showFileDetails(fileData);
+            });
+        });
     }
 
-    // Hotspots removed from UI
-    // if (results.hotspots) {
-    //     displayHotspots(results.hotspots);
-    // }
+    // Update Patterns Tab (Cards)
+    const patternsList = document.getElementById('patterns-list');
+    if (patternsList && results.patterns) {
+        let pHtml = '<div class="patterns-grid">';
 
-    // File tree
-    if (results.results) {
-        displayFileTree(results.results);
-    }
+        results.patterns.forEach(p => {
+            const percentage = p.percentage || 0;
+            pHtml += `
+                <div class="pattern-card">
+                    <div class="header">
+                        <span class="icon">📊</span>
+                        <span class="name">${p.pattern}</span>
+                    </div>
+                    <div class="count">${p.occurrences || 0}</div>
+                    <div class="meta">Detected in ${percentage}% of files</div>
+                    <div class="progress-bg">
+                        <div class="progress-bar" style="width: ${percentage}%; background: linear-gradient(90deg, #8b5cf6, #ec4899);"></div>
+                    </div>
+                </div>
+             `;
+        });
 
-    // Patterns
-    if (results.patterns) {
-        displayPatterns(results.patterns);
+        pHtml += '</div>';
+        patternsList.innerHTML = pHtml;
     }
 }
 
-function animateScoreGauge(score) {
+function generateFileCategoryBlock(title, files, type) {
+    const borderColor = type === 'suspicious' ? '#ef4444' : type === 'questionable' ? '#f59e0b' : '#10b981';
+    const bg = type === 'suspicious' ? 'rgba(239,68,68,0.1)' : type === 'questionable' ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)';
+
+    let html = `
+        <div class="file-category">
+            <h3 style="color: ${borderColor}; display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                ${type === 'suspicious' ? '🚨' : type === 'questionable' ? '⚠️' : '✅'} 
+                ${title} (${files.length})
+            </h3>
+            <div class="file-list">
+    `;
+
+    files.forEach(f => {
+        const scoreColor = getScoreColor(f.score);
+        html += `
+            <div class="file-item" data-path="${f.path}" style="border-left: 3px solid ${borderColor};">
+                <div class="file-info">
+                    <div class="name">${f.path}</div>
+                    <div class="meta">JavaScript • ${f.lineCount || '?'} lines</div>
+                </div>
+                <div class="file-score">
+                    <span class="val" style="color:${scoreColor}">${f.score}</span>
+                    <span class="lbl">AI Score</span>
+                </div>
+            </div>
+        `;
+    });
+
+    html += `</div></div>`;
+    return html;
+}
+
+function getScoreColor(score) {
+    if (score >= 80) return '#ef4444';
+    if (score >= 60) return '#f97316';
+    if (score >= 40) return '#eab308';
+    return '#22c55e';
+}
+
+function showFileDetails(fileData) {
+    // Reuse existing logic or simple alert for now if V2 detail view isn't easily accessible
+    // Ideally we inject a modal or detail view
+    // For now let's just log key info in a nicely formatted alert or console
+    let msg = `Fichier: ${fileData.path}\nScore: ${fileData.score}\n\nDétails:\n`;
+    const details = fileData.breakdown || {};
+    for (let [k, v] of Object.entries(details)) {
+        msg += `- ${k}: ${v}\n`;
+    }
+    alert(msg);
+}
+
+function animateScore(score) { // Renamed from animateScoreGauge to match call in displayResults
     const circle = document.getElementById('score-circle');
     const circumference = 2 * Math.PI * 54; // r = 54
     const offset = circumference - (score / 100) * circumference;
@@ -1044,148 +1149,7 @@ function animateScoreGauge(score) {
     }, 100);
 }
 
-function displayHotspots(hotspots) {
-    const hotspotsList = document.getElementById('hotspots-list');
-    hotspotsList.innerHTML = '';
 
-    hotspots.slice(0, 5).forEach(file => {
-        const item = document.createElement('div');
-        item.className = 'hotspot-item';
-
-        // SVG File Icon (Same as tree view for consistency)
-        const fileIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--text-secondary); min-width: 14px;"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>`;
-
-        const wrapper = document.createElement('div');
-        wrapper.style.display = 'flex';
-        wrapper.style.justifyContent = 'space-between';
-        wrapper.style.alignItems = 'center';
-        wrapper.style.width = '100%';
-
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'hotspot-name';
-        nameSpan.title = file.path;
-        nameSpan.style.display = 'flex';
-        nameSpan.style.alignItems = 'center';
-        nameSpan.style.overflow = 'hidden';
-        nameSpan.style.textOverflow = 'ellipsis';
-        nameSpan.style.whiteSpace = 'nowrap';
-
-        nameSpan.appendChild(createFileIcon());
-        nameSpan.appendChild(document.createTextNode(file.path.split('/').pop()));
-
-        const scoreSpan = document.createElement('span');
-        scoreSpan.className = 'hotspot-score';
-        scoreSpan.style.fontWeight = '700';
-        scoreSpan.style.color = getScoreColor(file.score);
-        scoreSpan.style.fontSize = '12px';
-        scoreSpan.textContent = `${file.score}%`;
-
-        wrapper.appendChild(nameSpan);
-        wrapper.appendChild(scoreSpan);
-        item.appendChild(wrapper);
-        hotspotsList.appendChild(item);
-    });
-}
-
-function displayFileTree(files) {
-    const fileTree = document.getElementById('file-tree');
-    fileTree.innerHTML = '';
-
-    files.slice(0, 20).forEach(file => {
-        const item = document.createElement('div');
-        item.className = 'tree-item'; // Use class for styling
-        item.style.padding = '8px';
-        item.style.borderBottom = '1px solid var(--border-color)';
-        // SVG File Icon
-
-
-        const wrapper = document.createElement('div');
-        wrapper.style.display = 'flex';
-        wrapper.style.justifyContent = 'space-between';
-        wrapper.style.alignItems = 'center';
-
-        const nameSpan = document.createElement('span');
-        nameSpan.style.fontSize = '12px';
-        nameSpan.style.display = 'flex';
-        nameSpan.style.alignItems = 'center';
-        nameSpan.style.overflow = 'hidden';
-        nameSpan.style.textOverflow = 'ellipsis';
-        nameSpan.style.whiteSpace = 'nowrap';
-
-        const iconSpan = document.createElement('span');
-        iconSpan.appendChild(createFileIcon());
-        nameSpan.appendChild(iconSpan);
-
-        const pathSpan = document.createElement('span');
-        pathSpan.title = file.path;
-        pathSpan.textContent = file.path;
-        nameSpan.appendChild(pathSpan);
-
-        const scoreSpan = document.createElement('span');
-        scoreSpan.style.fontWeight = '700';
-        scoreSpan.style.color = getScoreColor(file.score);
-        scoreSpan.style.fontSize = '12px';
-        scoreSpan.textContent = `${file.score}%`;
-
-        wrapper.appendChild(nameSpan);
-        wrapper.appendChild(scoreSpan);
-        item.appendChild(wrapper);
-        fileTree.appendChild(item);
-    });
-}
-
-function displayPatterns(patterns) {
-    const patternsList = document.getElementById('patterns-list');
-    patternsList.innerHTML = '';
-
-    // Grouper par catégorie
-    const grouped = patterns.reduce((acc, p) => {
-        if (!acc[p.category]) acc[p.category] = [];
-        acc[p.category].push(p);
-        return acc;
-    }, {});
-
-    Object.entries(grouped).forEach(([category, items]) => {
-        const section = document.createElement('div');
-        section.className = 'pattern-item';
-        const nameDiv = document.createElement('div');
-        nameDiv.className = 'pattern-name';
-        nameDiv.textContent = formatCategory(category);
-
-        const detailsDiv = document.createElement('div');
-        detailsDiv.className = 'pattern-details';
-
-        items.forEach(i => {
-            const line = document.createElement('div');
-            line.textContent = `• ${i.name} (×${i.count})`;
-            detailsDiv.appendChild(line);
-        });
-
-        section.appendChild(nameDiv);
-        section.appendChild(detailsDiv);
-        patternsList.appendChild(section);
-    });
-}
-
-function getScoreColor(score) {
-    if (score < 30) return '#10b981';
-    if (score < 60) return '#fbbf24';
-    return '#ef4444';
-}
-
-function formatCategory(category) {
-    const keyMap = {
-        linguistic: 'cat_linguistic',
-        code_structure: 'cat_structure',
-        naming: 'cat_naming',
-        error_handling: 'cat_error',
-        documentation: 'cat_doc',
-        special_chars: 'cat_special',
-        vocabulary: 'cat_vocab',
-        human_markers: 'cat_human'
-    };
-    return t(keyMap[category]) || category;
-}
 
 /**
  * Gestion des onglets
