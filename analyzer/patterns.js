@@ -45,24 +45,47 @@ export const LINGUISTIC_PATTERNS = [
     },
     {
         id: 'ai-phrase-first',
-        name: "Structure \"First, we need to\"",
+        name: "Structure \"First, we need to\" (EN/FR)",
         weight: 9,
         category: PATTERN_CATEGORIES.LINGUISTIC,
         immuneToFormatting: true,
         detect: (code) => {
             const comments = extractComments(code);
             const patterns = [
+                // Anglais
                 /first,?\s+we\s+(need|will|should)/gi,
                 /then,?\s+we\s+(need|will|should)/gi,
                 /next,?\s+we\s+(need|will|should)/gi,
-                /finally,?\s+we\s+(need|will|should)/gi
+                /finally,?\s+we\s+(need|will|should)/gi,
+                // Français
+                /(tout\s+)?d'abord,?\s+nous\s+(devons|allons)/gi,
+                /ensuite,?\s+nous\s+(devons|allons)/gi,
+                /enfin,?\s+nous\s+(devons|allons)/gi,
+                /pour\s+commencer,?\s+/gi
+            ];
+            return patterns.reduce((sum, p) => sum + countMatches(comments, p), 0);
+        }
+    },
+    {
+        id: 'ai-phrase-here-is',
+        name: "Phrases de présentation (EN/FR)",
+        weight: 10,
+        category: PATTERN_CATEGORIES.LINGUISTIC,
+        immuneToFormatting: true,
+        detect: (code) => {
+            const comments = extractComments(code);
+            const patterns = [
+                /\bhere'?s\s+(how|what|why|the)/gi,
+                /\bvoici\s+(comment|ce\s+que|pourquoi|le|la|un|une)/gi,
+                /\bje\s+vais\s+(vous\s+)?(expliquer|montrer)/gi,
+                /\bceci\s+est\s+un\s+exemple/gi
             ];
             return patterns.reduce((sum, p) => sum + countMatches(comments, p), 0);
         }
     },
     {
         id: 'ai-phrase-note-that',
-        name: "Expressions \"Note that\", \"Keep in mind\"",
+        name: "Expressions \"Note that\" (EN/FR)",
         weight: 8,
         category: PATTERN_CATEGORIES.LINGUISTIC,
         immuneToFormatting: true,
@@ -72,7 +95,13 @@ export const LINGUISTIC_PATTERNS = [
                 /\bnote\s+that\b/gi,
                 /\bkeep\s+in\s+mind\b/gi,
                 /\bit'?s\s+worth\s+noting/gi,
-                /\bimportant\s+to\s+note/gi
+                /\bimportant\s+to\s+note/gi,
+                // Français
+                /\bnoter?\s+que\b/gi,
+                /\b(il\s+)?faut\s+noter\s+que/gi,
+                /\bimportant\s+de\s+noter/gi,
+                /\bgarder?\s+(à|a)\s+l'esprit/gi,
+                /\battention\s+(:|à)/gi
             ];
             return patterns.reduce((sum, p) => sum + countMatches(comments, p), 0);
         }
