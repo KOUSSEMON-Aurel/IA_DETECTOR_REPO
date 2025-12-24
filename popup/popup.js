@@ -763,11 +763,5 @@ function initTabs() {
         });
     });
 }
-function getScoreColor(score) {
-    if (score < 50) return 'var(--success-color)';
-    if (score < 75) return 'var(--warning-color)';
-    return 'var(--error-color)';
-}
-
 // Fin du fichier
 
