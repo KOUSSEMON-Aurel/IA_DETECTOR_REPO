@@ -38,7 +38,14 @@ const translations = {
         cat_doc: "Documentation",
         cat_special: "Caractères Spéciaux",
         cat_vocab: "Vocabulaire",
-        cat_human: "Marqueurs Humains"
+        cat_vocab: "Vocabulaire",
+        cat_human: "Marqueurs Humains",
+        label_appearance: "Apparence",
+        label_language: "Langue",
+        theme_dark: "Mode Sombre",
+        theme_light: "Mode Clair",
+        lang_fr: "Français",
+        lang_en: "English"
     },
     en: {
         app_title: "Vibe Detector",
@@ -74,7 +81,13 @@ const translations = {
         cat_doc: "Documentation",
         cat_special: "Special Characters",
         cat_vocab: "Vocabulary",
-        cat_human: "Human Markers"
+        cat_human: "Human Markers",
+        label_appearance: "Appearance",
+        label_language: "Language",
+        theme_dark: "Dark Mode",
+        theme_light: "Light Mode",
+        lang_fr: "French",
+        lang_en: "English"
     }
 };
 
