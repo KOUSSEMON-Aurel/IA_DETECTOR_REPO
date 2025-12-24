@@ -32,13 +32,14 @@ const fileTreeContainer = document.getElementById('file-tree-container');
 /**
  * Gestion des Paramètres (Token) - Variables
  */
+// Éléments DOM Settings Modal
 const settingsBtn = document.getElementById('settings-btn');
 const settingsModal = document.getElementById('settings-modal');
 const closeSettingsBtn = document.getElementById('close-settings-btn');
 const saveSettingsBtn = document.getElementById('save-settings-btn');
 const githubTokenInput = document.getElementById('github-token');
-const themeToggle = document.getElementById('theme-toggle');
-const langToggle = document.getElementById('lang-toggle'); // Language Toggle
+const modalLangSelect = document.getElementById('modal-lang-select');
+const modalThemeToggle = document.getElementById('modal-theme-toggle');
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', async () => {
@@ -46,85 +47,64 @@ document.addEventListener('DOMContentLoaded', async () => {
     initScanButton();
     initTabs();
     initFilePicker();
-    initSettings();
-    initTheme(); // Thème Light/Dark
-    initLanguage(); // Langue
 
-    // Charger l'état ou initialiser
+    // Charger préférences
+    await initPreferences();
+
+    initSettings(); // Listeners
+
+    // Charger état session
     await loadState();
 });
 
 /**
- * Gestion de la langue
+ * Initialisation des préférences (Thème + Langue)
  */
-function initLanguage() {
-    // Restaurer langue sauvegardée
-    chrome.storage.local.get(['lang'], (result) => {
-        if (result.lang) {
-            setLang(result.lang);
-        } else {
-            // Init auto
-            initI18n();
-        }
-        updateLangButton();
+async function initPreferences() {
+    return new Promise((resolve) => {
+        chrome.storage.local.get(['theme', 'lang'], (result) => {
+            // Thème
+            const theme = result.theme || 'dark'; // Default dark
+            applyTheme(theme);
+
+            // Langue
+            if (result.lang) {
+                setLang(result.lang);
+            } else {
+                initI18n(); // Auto-detect
+            }
+
+            resolve();
+        });
     });
-
-    if (langToggle) {
-        langToggle.addEventListener('click', toggleLanguage);
-    }
-}
-
-function toggleLanguage() {
-    const current = getCurrentLang();
-    const newLang = current === 'fr' ? 'en' : 'fr';
-    setLang(newLang);
-    chrome.storage.local.set({ lang: newLang });
-    updateLangButton();
-}
-
-function updateLangButton() {
-    const langText = langToggle.querySelector('.lang-text');
-    if (langText) {
-        langText.innerText = getCurrentLang().toUpperCase();
-    }
 }
 
 function initSettings() {
-    console.log('Initialisation des paramètres...');
-    if (!settingsBtn) {
-        console.error('Bouton settings introuvable !');
-        return;
-    }
+    if (!settingsBtn) return;
 
-    settingsBtn.addEventListener('click', () => {
-        console.log('Clic sur paramètres');
-        openSettings();
-    });
+    settingsBtn.addEventListener('click', openSettings);
 
     if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', closeSettings);
     if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettings);
 
-    // Fermer si clic en dehors
+    // Lang Change
+    if (modalLangSelect) {
+        modalLangSelect.addEventListener('change', (e) => {
+            const newLang = e.target.value;
+            setLang(newLang);
+            chrome.storage.local.set({ lang: newLang });
+        });
+    }
+
+    // Theme Toggle
+    if (modalThemeToggle) {
+        modalThemeToggle.addEventListener('click', toggleTheme);
+    }
+
     if (settingsModal) {
         settingsModal.addEventListener('click', (e) => {
             if (e.target === settingsModal) closeSettings();
         });
-    }
-}
-
-/**
- * Thème Light/Dark
- */
-function initTheme() {
-    // 1. Charger thème sauvegardé
-    chrome.storage.local.get(['theme'], (result) => {
-        const theme = result.theme || 'light'; // Default to light
-        applyTheme(theme);
-    });
-
-    // 2. Event Listener
-    if (themeToggle) {
-        themeToggle.addEventListener('click', toggleTheme);
     }
 }
 
@@ -133,22 +113,33 @@ function toggleTheme() {
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
 
     applyTheme(newTheme);
-
-    // Sauvegarder
     chrome.storage.local.set({ theme: newTheme });
+    updateThemeUI(newTheme);
 }
 
 function applyTheme(theme) {
     if (theme === 'light') {
         document.body.setAttribute('data-theme', 'light');
     } else {
-        document.body.removeAttribute('data-theme'); // Défaut = dark
+        document.body.removeAttribute('data-theme');
     }
 }
 
-const settingsAlert = document.getElementById('settings-alert');
+function updateThemeUI(theme) {
+    // Update button text/icons inside modal logic handles by CSS classes mostly
+    // But we might want to change text? "Mode Sombre" vs "Mode Clair"?
+    // The label says "Apparence", the button says "Mode Sombre".
+    // If logic is "Switch to...", then:
+    // Dark mode active -> Button shows Sun icon?
+    // Let's rely on CSS show/hide we added earlier for .icon-sun/moon
+    // Check popup.css lines 169+
+}
 
 function openSettings(errorMsg = null) {
+    // Sync inputs
+    if (modalLangSelect) modalLangSelect.value = getCurrentLang();
+
+    // ... existing token logic ...
     // Gestion du message d'erreur
     if (errorMsg && settingsAlert) {
         settingsAlert.innerHTML = errorMsg;
