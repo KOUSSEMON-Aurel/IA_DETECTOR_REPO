@@ -3,9 +3,9 @@
  */
 
 import { scanRepository } from '../scanners/repo-scanner.js';
-import { scanFile } from '../scanners/file-scanner.js';
-import { scanFolder } from '../scanners/folder-scanner.js';
-import { getRepoTree } from '../api/github-client.js';
+import * as githubClient from '../api/github-client.js'; // Import global pour accès à getFileContent etc
+import { getRepoTree } from '../api/github-client.js'; // Gardé pour compatibilité existante
+import { analyzeFile, analyzeRepository, getVerdict } from '../analyzer/scorer.js'; // Import des fonctions d'analyse réelles
 
 // État de l'application
 let currentMode = 'repo';
@@ -438,231 +438,327 @@ async function scanRepositoryMode(url) {
             alert(`Erreur lors du scan : ${error.message}`);
         }
     }
-}
+    /**
+     * Mode File (Réel)
+     */
+    async function scanFileMode(url) {
+        const token = await getStoredToken();
+        const repoInfo = parseGitHubUrlWithFile(url);
 
-/**
- * Mode File (simplifié pour la démo)
- */
-async function scanFileMode(url) {
-    // Pour l'instant, simulation
-    setTimeout(() => {
-        const mockResults = {
-            score: 75,
-            confidence: 80,
-            verdict: '⚠️ Probablement généré par IA',
-            summary: {
-                human: 12,
-                uncertain: 5,
-                aiLikely: 45
-            },
-            patterns: [],
-            details: {}
-        };
+        if (!repoInfo || !repoInfo.path) {
+            alert("URL de fichier invalide. Utilisez le format: github.com/user/repo/blob/main/path/to/file");
+            return;
+        }
 
-        currentResults = mockResults;
-        displayResults(mockResults);
-    }, 2000);
-}
+        try {
+            showLoading();
+            updateProgress({ stage: 'Téléchargement fichier...', progress: 30 });
 
-/**
- * Mode Folder (simplifié)
- */
-async function scanFolderMode(url) {
-    setTimeout(() => {
-        const mockResults = {
-            score: 65,
-            confidence: 75,
-            verdict: '❓ Possiblement IA ou code mixte',
-            summary: {
-                human: 30,
-                uncertain: 10,
-                aiLikely: 25
-            },
-            patterns: [],
-            details: {}
-        };
+            // 1. Récupérer contenu
+            // Note: On doit importer getFileContent de github-client si pas déjà fait dans popup.js
+            // Mais github-client est importé comme module 'getRepoTree'. Il faut ajuster les imports en haut.
+            // Supposons qu'on a accès à githubClient
 
-        currentResults = mockResults;
-        displayResults(mockResults);
-    }, 2000);
-}
+            // Hack temporaire si imports manquants: on utilise repo-scanner qui a tout
+            // Mais mieux : on complète l'import en haut (voir étape suivante)
 
-/**
- * Affichage
- */
-function showLoading() {
-    urlInputSection.classList.add('hidden');
-    loadingSection.classList.remove('hidden');
-    resultsSection.classList.add('hidden');
-    // Avertissement fermeture
-    const loadingText = document.getElementById('loading-text');
-    if (loadingText) {
-        // On ne remplace pas le texte de stage, on ajoute un petit warning visuel si pas déjà présent
-        // (Simplifié: on compte sur le message d'erreur si ça coupe)
-    }
-}
+            const content = await githubClient.getFileContent(repoInfo.owner, repoInfo.repo, repoInfo.path, token);
 
-function hideLoading() {
-    loadingSection.classList.add('hidden');
-    urlInputSection.classList.remove('hidden');
-}
+            if (!content) throw new Error("Impossible de lire le fichier (404 ou vide)");
 
-function updateProgress(progress) {
-    const progressFill = document.getElementById('progress-fill');
-    const progressPercentage = document.getElementById('progress-percentage');
-    const loadingText = document.getElementById('loading-text');
+            updateProgress({ stage: 'Analyse...', progress: 60 });
 
-    if (progress.progress !== undefined) {
-        if (progressFill) progressFill.style.width = `${progress.progress}%`;
-        if (progressPercentage) progressPercentage.innerText = `${progress.progress}%`;
+            // 2. Analyser
+            const results = analyzeFile(content, { platform: 'github' });
+
+            updateProgress({ stage: 'Terminé', progress: 100 });
+
+            // Adapter format résultats pour displayResults
+            const formattedResults = {
+                score: results.score,
+                confidence: results.confidence,
+                verdict: results.verdict,
+                summary: {
+                    human: 0, // Pas pertinent pour un seul fichier
+                    uncertain: 0,
+                    aiLikely: 0
+                },
+                patterns: results.patterns,
+                details: results.details,
+                totalFiles: 1
+            };
+
+            currentResults = formattedResults;
+            displayResults(formattedResults);
+            saveState();
+
+        } catch (error) {
+            console.error(error);
+            alert("Erreur scan fichier: " + error.message);
+            hideLoading();
+        }
     }
 
-    if (progress.stage && loadingText) {
-        loadingText.innerText = progress.stage;
+    /**
+     * Mode Folder (Réel)
+     */
+    async function scanFolderMode(url) {
+        const token = await getStoredToken();
+        const repoInfo = parseGitHubUrlWithFile(url); // Gère aussi les tree/x/folder
+
+        if (!repoInfo || !repoInfo.path) {
+            alert("URL de dossier invalide. Utilisez le format: github.com/user/repo/tree/main/folder");
+            return;
+        }
+
+        try {
+            showLoading();
+
+            // On réutilise scanGitHubRepository mais on filtre ? 
+            // C'est plus simple de réimplémenter une logique légère ici pour le dossier
+
+            updateProgress({ stage: 'Analyse arborescence...', progress: 10 });
+
+            const tree = await getRepoTree(`https://github.com/${repoInfo.owner}/${repoInfo.repo}`, token);
+
+            // Filtrer fichiers du dossier
+            const folderFiles = tree.filter(f => f.path.startsWith(repoInfo.path));
+
+            if (folderFiles.length === 0) {
+                throw new Error("Dossier vide ou introuvable");
+            }
+
+            updateProgress({ stage: `Téléchargement ${folderFiles.length} fichiers...`, progress: 30 });
+
+            // Télécharger contenu (limité à 20 fichiers pour perf dossier ?)
+            const maxFiles = 50;
+            const limitedFiles = folderFiles.slice(0, maxFiles);
+
+            const filesWithContent = await githubClient.getMultipleFileContents(repoInfo.owner, repoInfo.repo, limitedFiles, token);
+
+            updateProgress({ stage: 'Analyse...', progress: 70 });
+
+            const results = analyzeRepository(filesWithContent, { root: repoInfo.repo });
+
+            updateProgress({ stage: 'Terminé', progress: 100 });
+
+            const final = {
+                score: results.score, // Corrigé précédemment (était globalScore)
+                confidence: results.confidence,
+                verdict: getVerdict(results.score, results.confidence), // Besoin import getVerdict ou le récupérer de results si dispo
+                summary: results.summary || {},
+                patterns: [], // Agrégation complexe, on laisse vide ou on prend le top
+                results: results.results, // Pour le file tree
+                totalFiles: filesWithContent.length
+            };
+
+            currentResults = final;
+            displayResults(final);
+            saveState();
+
+        } catch (error) {
+            console.error(error);
+            if (error.message.includes('403')) {
+                openSettings("⚠️ Limite atteinte pour ce dossier.");
+            } else {
+                alert("Erreur scan dossier: " + error.message);
+            }
+            hideLoading();
+        }
     }
-}
 
-function displayResults(results) {
-    hideLoading();
-    resultsSection.classList.remove('hidden');
-
-    // Animer la jauge
-    animateScoreGauge(results.score || 0);
-
-    // Mettre à jour les infos
-    document.getElementById('score-number').innerText = results.score || 0;
-    document.getElementById('verdict-text').innerText = results.verdict || 'Analyse terminée';
-    document.getElementById('confidence-value').innerText = results.confidence || 0;
-    document.getElementById('files-count').innerText = results.totalFiles || 1;
-
-    // Stats
-    if (results.summary) {
-        document.getElementById('stat-human').innerText = results.summary.human || 0;
-        document.getElementById('stat-uncertain').innerText = results.summary.uncertain || 0;
-        document.getElementById('stat-ai').innerText = results.summary.aiLikely || 0;
+    // Helper pour parser URL fichier/dossier
+    function parseGitHubUrlWithFile(url) {
+        // Match github.com/user/repo/blob/branch/path...
+        // ou github.com/user/repo/tree/branch/path...
+        const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/(blob|tree)\/[^\/]+\/(.+)/);
+        if (match) {
+            return {
+                owner: match[1],
+                repo: match[2],
+                type: match[3],
+                path: match[4]
+            };
+        }
+        return null;
     }
 
-    // Hotspots
-    if (results.hotspots) {
-        displayHotspots(results.hotspots);
+    /**
+     * Affichage
+     */
+    function showLoading() {
+        urlInputSection.classList.add('hidden');
+        loadingSection.classList.remove('hidden');
+        resultsSection.classList.add('hidden');
+        // Avertissement fermeture
+        const loadingText = document.getElementById('loading-text');
+        if (loadingText) {
+            // On ne remplace pas le texte de stage, on ajoute un petit warning visuel si pas déjà présent
+            // (Simplifié: on compte sur le message d'erreur si ça coupe)
+        }
     }
 
-    // File tree
-    if (results.results) {
-        displayFileTree(results.results);
+    function hideLoading() {
+        loadingSection.classList.add('hidden');
+        urlInputSection.classList.remove('hidden');
     }
 
-    // Patterns
-    if (results.patterns) {
-        displayPatterns(results.patterns);
+    function updateProgress(progress) {
+        const progressFill = document.getElementById('progress-fill');
+        const progressPercentage = document.getElementById('progress-percentage');
+        const loadingText = document.getElementById('loading-text');
+
+        if (progress.progress !== undefined) {
+            if (progressFill) progressFill.style.width = `${progress.progress}%`;
+            if (progressPercentage) progressPercentage.innerText = `${progress.progress}%`;
+        }
+
+        if (progress.stage && loadingText) {
+            loadingText.innerText = progress.stage;
+        }
     }
-}
 
-function animateScoreGauge(score) {
-    const circle = document.getElementById('score-circle');
-    const circumference = 2 * Math.PI * 54; // r = 54
-    const offset = circumference - (score / 100) * circumference;
+    function displayResults(results) {
+        hideLoading();
+        resultsSection.classList.remove('hidden');
 
-    // Animation
-    setTimeout(() => {
-        circle.style.strokeDashoffset = offset;
-    }, 100);
-}
+        // Animer la jauge
+        animateScoreGauge(results.score || 0);
 
-function displayHotspots(hotspots) {
-    const hotspotsList = document.getElementById('hotspots-list');
-    hotspotsList.innerHTML = '';
+        // Mettre à jour les infos
+        document.getElementById('score-number').innerText = results.score || 0;
+        document.getElementById('verdict-text').innerText = results.verdict || 'Analyse terminée';
+        document.getElementById('confidence-value').innerText = results.confidence || 0;
+        document.getElementById('files-count').innerText = results.totalFiles || 1;
 
-    hotspots.slice(0, 5).forEach(file => {
-        const item = document.createElement('div');
-        item.className = 'hotspot-item';
-        item.innerHTML = `
+        // Stats
+        if (results.summary) {
+            document.getElementById('stat-human').innerText = results.summary.human || 0;
+            document.getElementById('stat-uncertain').innerText = results.summary.uncertain || 0;
+            document.getElementById('stat-ai').innerText = results.summary.aiLikely || 0;
+        }
+
+        // Hotspots
+        if (results.hotspots) {
+            displayHotspots(results.hotspots);
+        }
+
+        // File tree
+        if (results.results) {
+            displayFileTree(results.results);
+        }
+
+        // Patterns
+        if (results.patterns) {
+            displayPatterns(results.patterns);
+        }
+    }
+
+    function animateScoreGauge(score) {
+        const circle = document.getElementById('score-circle');
+        const circumference = 2 * Math.PI * 54; // r = 54
+        const offset = circumference - (score / 100) * circumference;
+
+        // Animation
+        setTimeout(() => {
+            circle.style.strokeDashoffset = offset;
+        }, 100);
+    }
+
+    function displayHotspots(hotspots) {
+        const hotspotsList = document.getElementById('hotspots-list');
+        hotspotsList.innerHTML = '';
+
+        hotspots.slice(0, 5).forEach(file => {
+            const item = document.createElement('div');
+            item.className = 'hotspot-item';
+            item.innerHTML = `
       <span class="hotspot-name" title="${file.path}">${file.path.split('/').pop()}</span>
       <span class="hotspot-score">${file.score}%</span>
     `;
-        hotspotsList.appendChild(item);
-    });
-}
+            hotspotsList.appendChild(item);
+        });
+    }
 
-function displayFileTree(files) {
-    const fileTree = document.getElementById('file-tree');
-    fileTree.innerHTML = '';
+    function displayFileTree(files) {
+        const fileTree = document.getElementById('file-tree');
+        fileTree.innerHTML = '';
 
-    files.slice(0, 20).forEach(file => {
-        const item = document.createElement('div');
-        item.style.padding = '8px';
-        item.style.borderBottom = '1px solid var(--border-color)';
-        item.innerHTML = `
+        files.slice(0, 20).forEach(file => {
+            const item = document.createElement('div');
+            item.style.padding = '8px';
+            item.style.borderBottom = '1px solid var(--border-color)';
+            item.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <span style="font-size: 12px;">📄 ${file.path}</span>
         <span style="font-weight: 700; color: ${getScoreColor(file.score)}">${file.score}%</span>
       </div>
     `;
-        fileTree.appendChild(item);
-    });
-}
+            fileTree.appendChild(item);
+        });
+    }
 
-function displayPatterns(patterns) {
-    const patternsList = document.getElementById('patterns-list');
-    patternsList.innerHTML = '';
+    function displayPatterns(patterns) {
+        const patternsList = document.getElementById('patterns-list');
+        patternsList.innerHTML = '';
 
-    // Grouper par catégorie
-    const grouped = patterns.reduce((acc, p) => {
-        if (!acc[p.category]) acc[p.category] = [];
-        acc[p.category].push(p);
-        return acc;
-    }, {});
+        // Grouper par catégorie
+        const grouped = patterns.reduce((acc, p) => {
+            if (!acc[p.category]) acc[p.category] = [];
+            acc[p.category].push(p);
+            return acc;
+        }, {});
 
-    Object.entries(grouped).forEach(([category, items]) => {
-        const section = document.createElement('div');
-        section.className = 'pattern-item';
-        section.innerHTML = `
+        Object.entries(grouped).forEach(([category, items]) => {
+            const section = document.createElement('div');
+            section.className = 'pattern-item';
+            section.innerHTML = `
       <div class="pattern-name">${formatCategory(category)}</div>
       <div class="pattern-details">
         ${items.map(i => `• ${i.name} (×${i.count})`).join('<br>')}
       </div>
     `;
-        patternsList.appendChild(section);
-    });
-}
-
-function getScoreColor(score) {
-    if (score < 30) return '#10b981';
-    if (score < 60) return '#fbbf24';
-    return '#ef4444';
-}
-
-function formatCategory(category) {
-    const names = {
-        linguistic: 'Linguistique',
-        code_structure: 'Structure du Code',
-        naming: 'Nommage',
-        error_handling: 'Gestion d\'erreurs',
-        documentation: 'Documentation',
-        special_chars: 'Caractères Spéciaux',
-        vocabulary: 'Vocabulaire',
-        human_markers: 'Marqueurs Humains'
-    };
-    return names[category] || category;
-}
-
-/**
- * Gestion des onglets
- */
-function initTabs() {
-    const tabBtns = document.querySelectorAll('.tab-btn');
-
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const targetTab = btn.dataset.tab;
-
-            // Désactiver tous les onglets
-            tabBtns.forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
-            // Activer l'onglet sélectionné
-            btn.classList.add('active');
-            document.getElementById(`tab-${targetTab}`).classList.add('active');
+            patternsList.appendChild(section);
         });
-    });
-}
+    }
+
+    function getScoreColor(score) {
+        if (score < 30) return '#10b981';
+        if (score < 60) return '#fbbf24';
+        return '#ef4444';
+    }
+
+    function formatCategory(category) {
+        const names = {
+            linguistic: 'Linguistique',
+            code_structure: 'Structure du Code',
+            naming: 'Nommage',
+            error_handling: 'Gestion d\'erreurs',
+            documentation: 'Documentation',
+            special_chars: 'Caractères Spéciaux',
+            vocabulary: 'Vocabulaire',
+            human_markers: 'Marqueurs Humains'
+        };
+        return names[category] || category;
+    }
+
+    /**
+     * Gestion des onglets
+     */
+    function initTabs() {
+        const tabBtns = document.querySelectorAll('.tab-btn');
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetTab = btn.dataset.tab;
+
+                // Désactiver tous les onglets
+                tabBtns.forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+                // Activer l'onglet sélectionné
+                btn.classList.add('active');
+                document.getElementById(`tab-${targetTab}`).classList.add('active');
+            });
+        });
+    }
