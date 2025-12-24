@@ -621,7 +621,9 @@ async function scanRepositoryMode(url) {
                 },
                 results: report.files.suspicious.concat(report.files.clean).map(f => ({
                     path: f.path,
-                    score: f.finalScore
+                    score: f.finalScore,
+                    lineCount: f.lineCount,
+                    breakdown: f.breakdown // Pass breakdown for UI stats
                 })),
                 patterns: report.topPatterns, // V3 patterns
                 totalFiles: report.summary.fileCount,
