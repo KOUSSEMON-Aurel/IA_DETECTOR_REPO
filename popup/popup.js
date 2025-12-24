@@ -424,6 +424,11 @@ async function scanFileMode(url) {
             score: 75,
             confidence: 80,
             verdict: '⚠️ Probablement généré par IA',
+            summary: {
+                human: 12,
+                uncertain: 5,
+                aiLikely: 45
+            },
             patterns: [],
             details: {}
         };
@@ -442,6 +447,11 @@ async function scanFolderMode(url) {
             score: 65,
             confidence: 75,
             verdict: '❓ Possiblement IA ou code mixte',
+            summary: {
+                human: 30,
+                uncertain: 10,
+                aiLikely: 25
+            },
             patterns: [],
             details: {}
         };
