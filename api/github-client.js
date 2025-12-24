@@ -88,6 +88,34 @@ export async function getRepositoryTree(owner, repo, token = null, includeFolder
 }
 
 /**
+ * Récupère le contenu d'un fichier
+ */
+export async function getFileContent(owner, repo, path, token = null) {
+    try {
+        const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${path}`;
+        const headers = {
+            'Accept': 'application/vnd.github.v3.raw'
+        };
+
+        if (token) {
+            headers['Authorization'] = `token ${token}`;
+        }
+
+        const response = await fetch(url, { headers });
+
+        if (!response.ok) {
+            throw new Error(`Erreur récupération fichier: ${response.status}`);
+        }
+
+        return await response.text();
+
+    } catch (error) {
+        console.error(`Erreur lecture ${path}:`, error);
+        return null;
+    }
+}
+
+/**
  * Récupère le contenu de plusieurs fichiers en parallèle
  */
 export async function getMultipleFileContents(owner, repo, files, token = null) {
