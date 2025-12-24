@@ -86,23 +86,28 @@ body {
 .icon-btn-header {
     background: transparent;
     border: none;
-    font-size: 20px;
-    /* Un peu plus grand */
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 50%;
-    /* Rond */
-    transition: background 0.2s;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     color: var(--text-secondary);
-    /* Couleur explicite */
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.3s;
     display: flex;
     align-items: center;
     justify-content: center;
+    line-height: 1;
+    text-transform: uppercase;
 }
 
 .icon-btn-header:hover {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    color: white;
+    border-color: transparent;
+    transform: translateY(-1px);
 }
 
 .version {
