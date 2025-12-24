@@ -328,6 +328,81 @@ body[data-theme="light"] .icon-moon {
     margin-bottom: 4px;
 }
 
+/* Patterns Tab: Dimensions Grid */
+.patterns-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.pattern-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: transform 0.2s;
+}
+
+.pattern-card:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.pattern-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.pattern-icon {
+    width: 20px;
+    /* Placeholder for the "barcode" icon */
+    height: 20px;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.pattern-title {
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.pattern-value {
+    font-size: 2.2em;
+    font-weight: 800;
+    color: #c084fc;
+    /* Purple tint */
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
+.pattern-meta {
+    font-size: 0.75em;
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
+.progress-bg {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: auto;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #d946ef 0%, #8b5cf6 100%);
+    border-radius: 3px;
+}
+
 /* Mode Selection */
 .mode-buttons {
     display: grid;

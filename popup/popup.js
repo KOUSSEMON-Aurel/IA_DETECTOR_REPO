@@ -1062,23 +1062,85 @@ function displayResults(results) {
         });
     }
 
-    // Update Patterns Tab (Cards)
+    results = {
+        score: report.summary.globalScore,
+        confidence: report.summary.confidence === 'high' ? 90 : report.summary.confidence === 'medium' ? 60 : 30, // Hack
+        verdict: report.summary.verdict,
+        summary: {
+            human: report.distribution.clean,
+            uncertain: report.distribution.questionable,
+            aiLikely: report.distribution.suspicious
+        },
+        results: report.files.suspicious.concat(report.files.clean).map(f => ({
+            path: f.path,
+            score: f.finalScore,
+            lineCount: f.lineCount,
+            breakdown: f.breakdown // Pass breakdown for UI stats
+        })),
+        patterns: report.topPatterns,
+        totalFiles: report.summary.fileCount,
+        temporal: report.temporal
+    };
+
+    // ... (rest of function until displayResults)
+
+    // ... inside displayResults ...
+
+    // Update Patterns Tab (Dimensions Breakdown)
     const patternsList = document.getElementById('patterns-list');
-    if (patternsList && results.patterns) {
+    if (patternsList && results.results) {
+        // Compute Dimensions stats
+        const files = results.results;
+        const totalFiles = files.length || 1;
+
+        // Helper to compute avg and coverage
+        const computeDim = (key, threshold = 40) => {
+            const sum = files.reduce((acc, f) => acc + (f.breakdown?.[key] || 0), 0);
+            const affected = files.filter(f => (f.breakdown?.[key] || 0) > threshold).length;
+            return {
+                avg: Math.round(sum / totalFiles),
+                percentage: Math.round((affected / totalFiles) * 100)
+            };
+        };
+
+        const dims = [
+            { id: 'temporal', label: 'Analyse Temporelle' },
+            { id: 'linguistic', label: 'Patterns Linguistiques', key: 'linguistic' }, // Maps to v2 linguistic + semantic
+            { id: 'naming', label: 'Nommage des Variables', key: 'naming' },
+            { id: 'structure', label: 'Structure du Code', key: 'structure' }, // formatting + structure
+            { id: 'documentation', label: 'Sur-documentation', key: 'documentation' }
+        ];
+
         let pHtml = '<div class="patterns-grid">';
 
-        results.patterns.forEach(p => {
-            const percentage = p.percentage || 0;
+        dims.forEach(d => {
+            let value = 0;
+            let percentage = 0;
+
+            if (d.id === 'temporal') {
+                if (results.temporal) {
+                    value = results.temporal.score || 0;
+                    percentage = value; // Use score as progress
+                }
+            } else {
+                const stats = computeDim(d.key);
+                value = stats.avg;
+                percentage = stats.percentage;
+            }
+
+            // Icon SVG (Barcode style generic)
+            const iconSvg = `<svg viewBox="0 0 24 24" fill="none" class="pattern-icon" stroke="currentColor" stroke-width="2"><path d="M4 6h1v12H4zm5 0h2v12H9zm5 0h2v12h-2zm5 0h1v12h-1z"/></svg>`;
+
             pHtml += `
                 <div class="pattern-card">
-                    <div class="header">
-                        <span class="icon">📊</span>
-                        <span class="name">${p.pattern}</span>
+                    <div class="pattern-header">
+                        ${iconSvg}
+                        <span class="pattern-title">${d.label}</span>
                     </div>
-                    <div class="count">${p.occurrences || 0}</div>
-                    <div class="meta">Detected in ${percentage}% of files</div>
+                    <div class="pattern-value">${value}</div>
+                    <div class="pattern-meta">Detected in ${percentage}% of files (Imp.)</div>
                     <div class="progress-bg">
-                        <div class="progress-bar" style="width: ${percentage}%; background: linear-gradient(90deg, #8b5cf6, #ec4899);"></div>
+                        <div class="progress-bar" style="width: ${percentage}%"></div>
                     </div>
                 </div>
              `;
@@ -1087,6 +1149,7 @@ function displayResults(results) {
         pHtml += '</div>';
         patternsList.innerHTML = pHtml;
     }
+
 }
 
 function generateFileCategoryBlock(title, files, type) {
