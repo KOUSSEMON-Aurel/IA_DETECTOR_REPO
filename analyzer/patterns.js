@@ -400,7 +400,7 @@ export const DOCUMENTATION_PATTERNS = [
 export const SPECIAL_CHAR_PATTERNS = [
     {
         id: 'emoji-checkmarks',
-        name: "Emojis checkmarks dans commentaires (✅❌⚠️)",
+        name: "Checkmarks dans commentaires",
         weight: 10,
         category: PATTERN_CATEGORIES.SPECIAL_CHARS,
         immuneToFormatting: true,
@@ -411,7 +411,7 @@ export const SPECIAL_CHAR_PATTERNS = [
     },
     {
         id: 'emoji-common',
-        name: "Emojis courants IA (🔧💡🚀📝🎯)",
+        name: "Emojis courants IA",
         weight: 8,
         category: PATTERN_CATEGORIES.SPECIAL_CHARS,
         immuneToFormatting: true,
@@ -422,7 +422,7 @@ export const SPECIAL_CHAR_PATTERNS = [
     },
     {
         id: 'emoji-suspicious',
-        name: "Emojis très suspects (🤔💪🎉👍🔥)",
+        name: "Emojis très suspects",
         weight: 12,
         category: PATTERN_CATEGORIES.SPECIAL_CHARS,
         immuneToFormatting: true,
@@ -433,7 +433,7 @@ export const SPECIAL_CHAR_PATTERNS = [
     },
     {
         id: 'unicode-decorative',
-        name: "Caractères Unicode décoratifs (│═→•)",
+        name: "Caractères Unicode décoratifs",
         weight: 7,
         category: PATTERN_CATEGORIES.SPECIAL_CHARS,
         immuneToFormatting: true,

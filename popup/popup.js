@@ -726,12 +726,19 @@ function displayFileTree(files) {
 
     files.slice(0, 20).forEach(file => {
         const item = document.createElement('div');
+        item.className = 'tree-item'; // Use class for styling
         item.style.padding = '8px';
         item.style.borderBottom = '1px solid var(--border-color)';
+        // SVG File Icon
+        const fileIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--text-secondary);"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>`;
+
         item.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-size: 12px;">📄 ${file.path}</span>
-        <span style="font-weight: 700; color: ${getScoreColor(file.score)}">${file.score}%</span>
+        <span style="font-size: 12px; display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            ${fileIcon}
+            <span title="${file.path}">${file.path}</span>
+        </span>
+        <span style="font-weight: 700; color: ${getScoreColor(file.score)}; font-size: 12px;">${file.score}%</span>
       </div>
     `;
         fileTree.appendChild(item);

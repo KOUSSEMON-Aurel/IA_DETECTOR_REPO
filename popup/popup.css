@@ -414,6 +414,7 @@ body {
 }
 
 /* Stats Cards */
+/* Stats Cards */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -423,10 +424,14 @@ body {
 .stat-card {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    padding: 16px;
+    padding: 12px;
     border-radius: 12px;
     text-align: center;
     transition: transform 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
 }
 
 .stat-card:hover {
@@ -434,32 +439,71 @@ body {
     border-color: var(--border-highlight);
 }
 
+.stat-icon-wrapper {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+}
+
+.stat-icon-wrapper.human {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.stat-icon-wrapper.uncertain {
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
+}
+
+.stat-icon-wrapper.ai {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
 .stat-value {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 700;
     color: var(--text-primary);
-    margin: 8px 0 4px;
+    margin: 0;
+    line-height: 1.2;
 }
 
 .stat-label {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    font-weight: 600;
 }
 
-/* Lists (Hotspots, Patterns, Files) */
+/* Hotspots */
+.hotspots h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+    margin-top: 20px;
+    font-weight: 600;
+}
+
+/* Lists */
 .hotspot-item,
 .pattern-item,
 .tree-item {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    padding: 12px 16px;
+    padding: 10px 12px;
+    /* Compat styling */
     border-radius: 8px;
     margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    transition: all 0.2s;
+    width: 100%;
+    /* Ensure full width */
 }
 
 .hotspot-item:hover,
