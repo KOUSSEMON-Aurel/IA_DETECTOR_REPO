@@ -32,10 +32,10 @@
                         </defs>
                     </svg>
                 </div>
-                <h1>Vibe Detector</h1>
+                <h1 data-i18n="app_name">Vibe Detector</h1>
             </div>
             <div class="header-actions">
-                <button class="icon-btn-header" id="theme-toggle" title="Thème">
+                <button class="icon-btn-header" id="theme-toggle" title="Thème" data-i18n="theme_toggle_title">
                     <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="5"></circle>
@@ -53,14 +53,15 @@
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                     </svg>
                 </button>
-                <button class="icon-btn-header" id="settings-btn" title="Paramètres / Token">
+                <button class="icon-btn-header" id="settings-btn" title="Paramètres / Token"
+                    data-i18n="settings_token_title">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <path
                             d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4">
                         </path>
                     </svg>
-                    <span class="btn-text">TOKEN</span>
+                    <span class="btn-text" data-i18n="token_btn">TOKEN</span>
                 </button>
                 <div class="version">v1.0</div>
             </div>
@@ -69,7 +70,7 @@
         <!-- Mode Selection -->
         <!-- Mode Selection -->
         <section class="mode-selection">
-            <h2>Mode de Scan</h2>
+            <h2 data-i18n="mode_selection_title">Mode de Scan</h2>
             <div class="mode-buttons">
                 <button class="mode-btn active" data-mode="repo">
                     <svg class="mode-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -77,7 +78,7 @@
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                         <polyline points="9 22 9 12 15 12 15 22"></polyline>
                     </svg>
-                    <span>Repo</span>
+                    <span data-i18n="mode_repo">Repo</span>
                 </button>
                 <button class="mode-btn" data-mode="file">
                     <svg class="mode-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -85,14 +86,14 @@
                         <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
                         <polyline points="13 2 13 9 20 9"></polyline>
                     </svg>
-                    <span>Fichier</span>
+                    <span data-i18n="mode_file">Fichier</span>
                 </button>
                 <button class="mode-btn" data-mode="folder">
                     <svg class="mode-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                     </svg>
-                    <span>Dossier</span>
+                    <span data-i18n="mode_folder">Dossier</span>
                 </button>
             </div>
         </section>
@@ -101,8 +102,9 @@
         <!-- URL Input -->
         <section class="url-input-section" id="url-input-section">
             <div class="input-container">
-                <input type="text" id="repo-url" class="url-input" placeholder="https://github.com/user/repo">
-                <button id="browse-btn" class="browse-btn hidden" title="Parcourir">
+                <input type="text" id="repo-url" class="url-input" placeholder="https://github.com/user/repo"
+                    data-i18n="placeholder_url">
+                <button id="browse-btn" class="browse-btn hidden" title="Parcourir" data-i18n="browse_btn_title">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
@@ -110,7 +112,7 @@
                 </button>
             </div>
 
-            <button id="scan-button" class="scan-button">
+            <button id="scan-button" class="scan-button" data-i18n="scan_btn">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="11" cy="11" r="8"></circle>
@@ -127,8 +129,8 @@
                 <div class="progress-fill" id="progress-fill"></div>
             </div>
             <p class="progress-percentage" id="progress-percentage">0%</p>
-            <p class="loading-text" id="loading-text">Initialisation...</p>
-            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+            <p class="loading-text" id="loading-text" data-i18n="loading">Initialisation...</p>
+            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;" data-i18n="loading_warn">
                 ⚠️ Ne fermez pas cette fenêtre pendant le scan
             </div>
         </section>
@@ -156,17 +158,19 @@
                     </div>
                 </div>
                 <div class="score-info">
-                    <h3 id="verdict-text">En attente...</h3>
-                    <p class="confidence">Confiance: <span id="confidence-value">0</span>%</p>
-                    <p class="files-analyzed">Fichiers analysés: <span id="files-count">0</span></p>
+                    <h3 id="verdict-text" data-i18n="verdict_waiting">En attente...</h3>
+                    <p class="confidence"><span data-i18n="confidence">Confiance:</span> <span
+                            id="confidence-value">0</span>%</p>
+                    <p class="files-analyzed"><span data-i18n="files_analyzed">Fichiers analysés:</span> <span
+                            id="files-count">0</span></p>
                 </div>
             </div>
 
             <!-- Tabs -->
             <div class="tabs">
-                <button class="tab-btn active" data-tab="overview">Vue d'ensemble</button>
-                <button class="tab-btn" data-tab="files">Fichiers</button>
-                <button class="tab-btn" data-tab="patterns">Patterns</button>
+                <button class="tab-btn active" data-tab="overview" data-i18n="tab_overview">Vue d'ensemble</button>
+                <button class="tab-btn" data-tab="files" data-i18n="tab_files">Fichiers</button>
+                <button class="tab-btn" data-tab="patterns" data-i18n="tab_patterns">Patterns</button>
             </div>
 
             <!-- Tab Content: Overview -->
@@ -181,7 +185,7 @@
                             </svg>
                         </div>
                         <div class="stat-info">
-                            <p class="stat-label">Humain</p>
+                            <p class="stat-label" data-i18n="human">Humain</p>
                             <p class="stat-value" id="stat-human">0</p>
                         </div>
                     </div>
@@ -195,7 +199,7 @@
                             </svg>
                         </div>
                         <div class="stat-info">
-                            <p class="stat-label">Incertain</p>
+                            <p class="stat-label" data-i18n="uncertain">Incertain</p>
                             <p class="stat-value" id="stat-uncertain">0</p>
                         </div>
                     </div>
@@ -211,7 +215,7 @@
                             </svg>
                         </div>
                         <div class="stat-info">
-                            <p class="stat-label">Probable IA</p>
+                            <p class="stat-label" data-i18n="ai_likely">Probable IA</p>
                             <p class="stat-value" id="stat-ai">0</p>
                         </div>
                     </div>
@@ -235,7 +239,7 @@
     <div id="file-picker-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Sélectionner un fichier</h3>
+                <h3 data-i18n="modal_file_title">Sélectionner un fichier</h3>
                 <button id="close-modal-btn" class="close-btn">&times;</button>
             </div>
             <div class="modal-body">
@@ -251,23 +255,25 @@
     <div id="settings-modal" class="modal hidden">
         <div class="modal-content settings-content">
             <div class="modal-header">
-                <h3>Paramètres</h3>
+                <h3 data-i18n="modal_settings_title">Paramètres</h3>
                 <button id="close-settings-btn" class="close-btn">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="settings-group">
-                    <label for="github-token">Token GitHub (Optionnel)</label>
-                    <p class="settings-desc">Ajoutez un token pour augmenter la limite d'appels API (5000/heure au lieu
+                    <label for="github-token" data-i18n="label_token">Token GitHub (Optionnel)</label>
+                    <p class="settings-desc" data-i18n="desc_token">Ajoutez un token pour augmenter la limite d'appels
+                        API (5000/heure au lieu
                         de 60).</p>
                     <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
                         class="settings-input">
                     <p class="settings-help">
                         <a href="https://github.com/settings/tokens/new?scopes=repo&description=VibeCodingDetector"
-                            target="_blank">Créer un token ici</a> (Scope 'repo' recommandé pour les dépôts privés)
+                            target="_blank" data-i18n="help_token">Créer un token ici</a> (Scope 'repo' recommandé pour
+                        les dépôts privés)
                     </p>
                 </div>
                 <div class="settings-actions">
-                    <button id="save-settings-btn" class="primary-btn">Sauvegarder</button>
+                    <button id="save-settings-btn" class="primary-btn" data-i18n="btn_save">Sauvegarder</button>
                 </div>
             </div>
         </div>

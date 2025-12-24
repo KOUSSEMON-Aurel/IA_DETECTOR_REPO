@@ -280,6 +280,21 @@ export function analyzeRepository(files, repoContext) {
     // Stats par dossier
     const folderStats = calculateFolderStats(results);
 
+    // Aggregate patterns
+    const patternMap = {};
+    results.forEach(fileResult => {
+        if (fileResult.patterns) {
+            fileResult.patterns.forEach(p => {
+                if (!patternMap[p.id]) {
+                    patternMap[p.id] = { ...p, count: 0, totalScore: 0 };
+                }
+                patternMap[p.id].count += p.count;
+                patternMap[p.id].totalScore += p.totalScore;
+            });
+        }
+    });
+    const aggregatedPatterns = Object.values(patternMap).sort((a, b) => b.totalScore - a.totalScore);
+
     return {
         score: Math.round(globalScore), // Renommé pour correspondre à popup.js (results.score)
         confidence: Math.round(globalConfidence), // Ajouté
@@ -287,6 +302,7 @@ export function analyzeRepository(files, repoContext) {
         analyzedFiles: validResults.length,
         results,
         hotspots,
+        patterns: aggregatedPatterns, // Added aggregated patterns
         folderStats,
         summary: generateSummary(results)
     };

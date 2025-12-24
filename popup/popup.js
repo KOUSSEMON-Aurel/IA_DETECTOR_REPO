@@ -1,3 +1,4 @@
+```javascript
 /**
  * Logique du popup
  */
@@ -6,6 +7,7 @@ import { scanRepository } from '../scanners/repo-scanner.js';
 import * as githubClient from '../api/github-client.js'; // Import global pour accès à getFileContent etc
 import { getRepoTree } from '../api/github-client.js'; // Gardé pour compatibilité existante
 import { analyzeFile, analyzeRepository, getVerdict } from '../analyzer/scorer.js'; // Import des fonctions d'analyse réelles
+import { initI18n, t } from './i18n.js';
 
 // État de l'application
 let currentMode = 'repo';
@@ -225,11 +227,11 @@ async function openFilePicker() {
         renderFileTree(tree);
     } catch (error) {
         fileTreeContainer.innerHTML = `
-            <div style="color: var(--error-color); text-align: center; padding: 20px;">
-                <p>Erreur: ${error.message}</p>
-                ${error.message.includes('403') ? '<p style="font-size: 12px; margin-top: 10px;">⚠️ Limite API atteinte. Réessayez plus tard ou configurez un token.</p>' : ''}
-            </div>
-        `;
+    < div style = "color: var(--error-color); text-align: center; padding: 20px;" >
+        <p>Erreur: ${error.message}</p>
+                ${ error.message.includes('403') ? '<p style="font-size: 12px; margin-top: 10px;">⚠️ Limite API atteinte. Réessayez plus tard ou configurez un token.</p>' : '' }
+            </div >
+    `;
     }
 }
 
@@ -303,12 +305,12 @@ function renderFileTree(tree) {
         if (currentMode === 'folder' && node.type !== 'tree') return;
 
         const el = document.createElement('div');
-        el.className = `tree-item ${node.type === 'tree' ? 'folder' : 'file'}`;
+        el.className = `tree - item ${ node.type === 'tree' ? 'folder' : 'file' } `;
         el.dataset.path = node.path;
         el.innerHTML = `
-            <span>${node.type === 'tree' ? '📁' : '📄'}</span>
-            <span>${node.path}</span>
-        `;
+    < span > ${ node.type === 'tree' ? '📁' : '📄' }</span >
+        <span>${node.path}</span>
+`;
 
         el.addEventListener('click', () => {
             selectPath(node.path);
@@ -328,12 +330,12 @@ function selectPath(path) {
     if (currentMode === 'file') {
         newUrl = `https://${platform}/${repoBase}/blob/main/${path}`; // "main" est une supposition, idéalement on garde la branche
     } else {
-        newUrl = `https://${platform}/${repoBase}/tree/main/${path}`;
-    }
+    newUrl = `https://${platform}/${repoBase}/tree/main/${path}`;
+}
 
-    repoUrlInput.value = newUrl;
-    saveState();
-    closeFilePicker();
+repoUrlInput.value = newUrl;
+saveState();
+closeFilePicker();
 }
 
 
