@@ -95,6 +95,17 @@ function saveSettings() {
 }
 
 /**
+ * Récupère le token stocké
+ */
+async function getStoredToken() {
+    return new Promise((resolve) => {
+        chrome.storage.local.get(['githubToken'], (result) => {
+            resolve(result.githubToken || null);
+        });
+    });
+}
+
+/**
  * Gestion des modes de scan
  */
 function initModeSwitching() {
