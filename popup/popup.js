@@ -6,7 +6,7 @@ import { scanRepository } from '../scanners/repo-scanner.js';
 import * as githubClient from '../api/github-client.js'; // Import global pour accès à getFileContent etc
 import { getRepoTree } from '../api/github-client.js'; // Gardé pour compatibilité existante
 import { analyzeFile, analyzeRepository, getVerdict } from '../analyzer/scorer.js'; // Import des fonctions d'analyse réelles
-import { initI18n, t } from './i18n.js';
+import { initI18n, t, setLang, getCurrentLang } from './i18n.js';
 
 // État de l'application
 let currentMode = 'repo';
@@ -38,6 +38,7 @@ const closeSettingsBtn = document.getElementById('close-settings-btn');
 const saveSettingsBtn = document.getElementById('save-settings-btn');
 const githubTokenInput = document.getElementById('github-token');
 const themeToggle = document.getElementById('theme-toggle');
+const langToggle = document.getElementById('lang-toggle'); // Language Toggle
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', async () => {
@@ -47,10 +48,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     initFilePicker();
     initSettings();
     initTheme(); // Thème Light/Dark
+    initLanguage(); // Langue
 
     // Charger l'état ou initialiser
     await loadState();
 });
+
+/**
+ * Gestion de la langue
+ */
+function initLanguage() {
+    // Restaurer langue sauvegardée
+    chrome.storage.local.get(['lang'], (result) => {
+        if (result.lang) {
+            setLang(result.lang);
+        } else {
+            // Init auto
+            initI18n();
+        }
+        updateLangButton();
+    });
+
+    if (langToggle) {
+        langToggle.addEventListener('click', toggleLanguage);
+    }
+}
+
+function toggleLanguage() {
+    const current = getCurrentLang();
+    const newLang = current === 'fr' ? 'en' : 'fr';
+    setLang(newLang);
+    chrome.storage.local.set({ lang: newLang });
+    updateLangButton();
+}
+
+function updateLangButton() {
+    const langText = langToggle.querySelector('.lang-text');
+    if (langText) {
+        langText.innerText = getCurrentLang().toUpperCase();
+    }
+}
 
 function initSettings() {
     console.log('Initialisation des paramètres...');

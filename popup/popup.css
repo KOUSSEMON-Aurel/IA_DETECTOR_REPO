@@ -169,6 +169,31 @@ body {
     padding: 0;
 }
 
+/* Theme Icon Logic: Show the icon for the OTHER mode */
+/* Default (Dark): Show Sun (to switch to Light) */
+body:not([data-theme="light"]) .icon-sun {
+    display: block;
+}
+
+body:not([data-theme="light"]) .icon-moon {
+    display: none;
+}
+
+/* Light: Show Moon (to switch to Dark) */
+body[data-theme="light"] .icon-sun {
+    display: none;
+}
+
+body[data-theme="light"] .icon-moon {
+    display: block;
+}
+
+/* Language Toggle */
+#lang-toggle {
+    width: 36px;
+    padding: 0;
+}
+
 .icon-btn-header:hover {
     background: var(--bg-tertiary);
     color: var(--text-primary);
