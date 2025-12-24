@@ -86,15 +86,23 @@ body {
 .icon-btn-header {
     background: transparent;
     border: none;
-    font-size: 18px;
+    font-size: 20px;
+    /* Un peu plus grand */
     cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
+    padding: 6px;
+    border-radius: 50%;
+    /* Rond */
     transition: background 0.2s;
+    color: var(--text-secondary);
+    /* Couleur explicite */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .icon-btn-header:hover {
     background: var(--bg-tertiary);
+    color: var(--text-primary);
 }
 
 .version {

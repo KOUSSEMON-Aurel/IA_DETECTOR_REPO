@@ -5,6 +5,7 @@
 import { scanRepository } from '../scanners/repo-scanner.js';
 import { scanFile } from '../scanners/file-scanner.js';
 import { scanFolder } from '../scanners/folder-scanner.js';
+import { getRepoTree } from '../api/github-client.js';
 
 // État de l'application
 let currentMode = 'repo';
@@ -18,14 +19,23 @@ const scanButton = document.getElementById('scan-button');
 const repoUrlInput = document.getElementById('repo-url');
 
 /**
- * Logique du File Picker
+ * Logique du File Picker - Variables
  */
-import { getRepoTree } from '../api/github-client.js';
+// import { getRepoTree } from '../api/github-client.js'; // Déjà importé ou gérer l'import en haut du fichier si module
 
 const browseBtn = document.getElementById('browse-btn');
 const modal = document.getElementById('file-picker-modal');
 const closeModalBtn = document.getElementById('close-modal-btn');
 const fileTreeContainer = document.getElementById('file-tree-container');
+
+/**
+ * Gestion des Paramètres (Token) - Variables
+ */
+const settingsBtn = document.getElementById('settings-btn');
+const settingsModal = document.getElementById('settings-modal');
+const closeSettingsBtn = document.getElementById('close-settings-btn');
+const saveSettingsBtn = document.getElementById('save-settings-btn');
+const githubTokenInput = document.getElementById('github-token');
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', async () => {
@@ -38,6 +48,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Charger l'état ou initialiser
     await loadState();
 });
+
+function initSettings() {
+    console.log('Initialisation des paramètres...');
+    if (!settingsBtn) {
+        console.error('Bouton settings introuvable !');
+        return;
+    }
+
+    settingsBtn.addEventListener('click', () => {
+        console.log('Clic sur paramètres');
+        openSettings();
+    });
+
+    if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', closeSettings);
+    if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettings);
+
+    // Fermer si clic en dehors
+    if (settingsModal) {
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) closeSettings();
+        });
+    }
+}
 
 /**
  * Gestion des modes de scan
