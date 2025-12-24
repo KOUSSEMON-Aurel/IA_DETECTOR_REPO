@@ -238,6 +238,96 @@ body[data-theme="light"] .icon-moon {
     text-transform: uppercase;
 }
 
+/* Temporal Tab: Grid Layout */
+.temporal-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    /* 4 columns for tall cards */
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.stat-box {
+    background: rgba(255, 255, 255, 0.05);
+    /* Glass dark */
+    padding: 16px 12px;
+    border-radius: 16px;
+    /* Smooth corners */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-height: 140px;
+    /* Tall styling */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    /* Content starts at top */
+    gap: 12px;
+    transition: transform 0.2s;
+}
+
+.stat-box:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.stat-box .label {
+    font-size: 0.75em;
+    color: var(--text-secondary);
+    line-height: 1.3;
+    text-transform: capitalize;
+    opacity: 0.8;
+}
+
+.stat-box .value {
+    font-size: 1.5em;
+    /* Big numbers */
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: auto;
+    /* Push to bottom */
+    line-height: 1.1;
+    word-break: break-word;
+    /* For longer text like "14h-15h" */
+}
+
+/* Specific tweaking for the last box if needed */
+.stat-box .value.date {
+    font-size: 1.3em;
+}
+
+.temporal-banner {
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.temporal-banner .title {
+    font-size: 1.1em;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.temporal-banner .desc {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.reasons {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 0.85em;
+    color: var(--text-secondary);
+}
+
+.reasons li {
+    margin-bottom: 4px;
+}
+
 /* Mode Selection */
 .mode-buttons {
     display: grid;

@@ -967,24 +967,27 @@ function displayResults(results) {
                 innerContent = `<div style="padding:15px; color:var(--text-secondary);">ℹ️ ${tData.reason}</div>`;
             } else {
                 // GRID LAYOUT FOR TEMPORAL STATS
+                // GRID LAYOUT FOR TEMPORAL STATS
                 const details = tData.details || {};
                 const gridStats = `
                     <div class="temporal-grid">
                         <div class="stat-box">
-                            <span class="label">Total Commits</span>
+                            <span class="label">total<br>Commits</span>
                             <span class="value">${details.totalCommits || 0}</span>
                         </div>
                         <div class="stat-box">
-                            <span class="label">Durée</span>
-                            <span class="value">${details.timeSpan || 'N/A'}</span>
+                            <span class="label">time<br>Span</span>
+                            <span class="value">${details.timeSpan ? details.timeSpan.replace(' days', ' jours') : 'N/A'}</span>
                         </div>
                         <div class="stat-box">
-                            <span class="label">Moy. / Jour</span>
+                            <span class="label">avg<br>Commits/Day</span>
                             <span class="value">${details.avgCommitsPerDay || 0}</span>
                         </div>
                         <div class="stat-box">
-                            <span class="label">Heures Actives</span>
-                            <span class="value date">${details.mostActiveHours || 'N/A'}</span>
+                            <span class="label">most<br>Active Hours</span>
+                            <span class="value date" style="font-size:1.1em">
+                                ${details.mostActiveHours || 'N/A'}
+                            </span>
                         </div>
                     </div>
                  `;
