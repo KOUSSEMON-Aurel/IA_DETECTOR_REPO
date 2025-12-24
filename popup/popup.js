@@ -36,6 +36,7 @@ const settingsModal = document.getElementById('settings-modal');
 const closeSettingsBtn = document.getElementById('close-settings-btn');
 const saveSettingsBtn = document.getElementById('save-settings-btn');
 const githubTokenInput = document.getElementById('github-token');
+const themeToggle = document.getElementById('theme-toggle');
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', async () => {
@@ -43,7 +44,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     initScanButton();
     initTabs();
     initFilePicker();
-    initSettings(); // Nouveau
+    initSettings();
+    initTheme(); // Thème Light/Dark
 
     // Charger l'état ou initialiser
     await loadState();
@@ -69,6 +71,42 @@ function initSettings() {
         settingsModal.addEventListener('click', (e) => {
             if (e.target === settingsModal) closeSettings();
         });
+    }
+}
+
+/**
+ * Thème Light/Dark
+ */
+function initTheme() {
+    // 1. Charger thème sauvegardé
+    chrome.storage.local.get(['theme'], (result) => {
+        const theme = result.theme || 'dark';
+        applyTheme(theme);
+    });
+
+    // 2. Event Listener
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+    }
+}
+
+function toggleTheme() {
+    const currentTheme = document.body.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+    applyTheme(newTheme);
+
+    // Sauvegarder
+    chrome.storage.local.set({ theme: newTheme });
+}
+
+function applyTheme(theme) {
+    if (theme === 'light') {
+        document.body.setAttribute('data-theme', 'light');
+        if (themeToggle) themeToggle.textContent = '🌙'; // Lune pour passer en dark
+    } else {
+        document.body.removeAttribute('data-theme'); // Défaut = dark
+        if (themeToggle) themeToggle.textContent = '☀️'; // Soleil pour passer en light
     }
 }
 
