@@ -104,13 +104,16 @@ export async function getFileContent(owner, repo, path, token = null) {
         const response = await fetch(url, { headers });
 
         if (!response.ok) {
+            if (response.status === 404) return null; // Fichier non trouvé = pas une erreur critique
             throw new Error(`Erreur récupération fichier: ${response.status}`);
         }
 
         return await response.text();
 
     } catch (error) {
-        console.error(`Erreur lecture ${path}:`, error);
+        if (!error.message.includes('404')) {
+            console.error(`Erreur lecture ${path}:`, error);
+        }
         return null;
     }
 }

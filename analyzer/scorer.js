@@ -266,6 +266,11 @@ export function analyzeRepository(files, repoContext) {
         ? validResults.reduce((sum, r) => sum + r.score, 0) / validResults.length
         : 0;
 
+    // Calculer la confiance globale
+    const globalConfidence = validResults.length > 0
+        ? validResults.reduce((sum, r) => sum + r.confidence, 0) / validResults.length
+        : 0;
+
     // Identifier les hotspots (fichiers les plus suspects)
     const hotspots = results
         .filter(r => r.score > 70)
@@ -276,7 +281,8 @@ export function analyzeRepository(files, repoContext) {
     const folderStats = calculateFolderStats(results);
 
     return {
-        globalScore: Math.round(globalScore),
+        score: Math.round(globalScore), // Renommé pour correspondre à popup.js (results.score)
+        confidence: Math.round(globalConfidence), // Ajouté
         totalFiles: files.length,
         analyzedFiles: validResults.length,
         results,
