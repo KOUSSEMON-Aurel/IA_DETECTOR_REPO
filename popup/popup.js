@@ -401,22 +401,29 @@ function saveState() {
      */
     async function scanRepositoryMode(url) {
         const token = await getStoredToken();
+        console.log('Mode Repo: Token présent ?', !!token);
 
-        // On passe le token via un objet options optionnel si scanRepository le supporte
-        // Voir scanRepository signature. Pour l'instant github-client functions prennent token.
-        // Il faut que repo-scanner accepte le token.
-        // Supposons qu'on modifie repo-scanner pour accepter un objet options en 3eme arg ou le modifier
+        try {
+            const results = await scanRepository(url, (progress) => {
+                updateProgress(progress);
+            }, { token });
 
-        // MODIFICATION NECESSAIRE DANS repo-scanner.js : 
-        // export async function scanRepository(url, progressCallback, options = {}) 
+            currentResults = results;
+            displayResults(results);
+            saveState();
 
-        const results = await scanRepository(url, (progress) => {
-            updateProgress(progress);
-        }, { token }); // Changement ici
+        } catch (error) {
+            console.error('Erreur scan:', error);
+            hideLoading();
 
-        currentResults = results;
-        displayResults(results);
-        saveState(); // Persistance
+            if (error.message.includes('403')) {
+                alert("Erreur 403 (Accès refusé) : Veuillez vérifier que votre Token GitHub est valide et configuré dans les paramètres (⚙️).");
+            } else if (error.message.includes('404')) {
+                alert("Erreur 404 : Dépôt introuvable ou privé. Vérifiez l'URL et votre Token.");
+            } else {
+                alert(`Erreur lors du scan : ${error.message}`);
+            }
+        }
     }
 
     /**
