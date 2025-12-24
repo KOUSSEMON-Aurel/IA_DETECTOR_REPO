@@ -72,13 +72,26 @@ function initSettings() {
     }
 }
 
-function openSettings() {
+const settingsAlert = document.getElementById('settings-alert');
+
+function openSettings(errorMsg = null) {
+    // Gestion du message d'erreur
+    if (errorMsg && settingsAlert) {
+        settingsAlert.innerHTML = errorMsg;
+        settingsAlert.classList.remove('hidden');
+    } else if (settingsAlert) {
+        settingsAlert.classList.add('hidden');
+        settingsAlert.innerHTML = '';
+    }
+
     // Charger token actuel
     chrome.storage.local.get(['githubToken'], (result) => {
         if (result.githubToken && githubTokenInput) {
             githubTokenInput.value = result.githubToken;
         }
     });
+
+    // Sauvegarder l'onglet précédent pour y revenir si besoin (UX optionnelle)
     settingsModal.classList.remove('hidden');
 }
 
@@ -417,8 +430,8 @@ async function scanRepositoryMode(url) {
         console.error('Erreur scan:', error);
         hideLoading();
 
-        if (error.message.includes('403')) {
-            alert("Erreur 403 (Accès refusé) : Veuillez vérifier que votre Token GitHub est valide et configuré dans les paramètres (⚙️).");
+        if (error.message.includes('403') || error.message.includes('rate limit')) {
+            openSettings("⚠️ <strong>Limite GitHub atteinte !</strong><br>Ajoutez un Token pour scanner ce dépôt volumineux (5000 req/h).");
         } else if (error.message.includes('404')) {
             alert("Erreur 404 : Dépôt introuvable ou privé. Vérifiez l'URL et votre Token.");
         } else {
