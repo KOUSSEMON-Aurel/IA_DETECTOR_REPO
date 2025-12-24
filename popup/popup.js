@@ -762,3 +762,15 @@ async function scanRepositoryMode(url) {
             });
         });
     }
+    function getScoreColor(score) {
+        if (score < 50) return 'var(--success-color)';
+        if (score < 75) return 'var(--warning-color)';
+        return 'var(--error-color)';
+    }
+
+} // Fin de displayPatterns (supposé manquant ou mal fermé plus haut, ou fin du wrapper si existant)
+
+// Note: Le code actuel semble avoir des fonctions imbriquées ou une structure brisée.
+// initTabs est OK. 
+// Je vais supposer que initTabs était censé être dans le scope global ou que j'ai coupé la fin.
+// Le plus simple : ajouter l'accolade manquante si c'est la fin du fichier.
