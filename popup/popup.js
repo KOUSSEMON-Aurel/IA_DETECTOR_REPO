@@ -455,6 +455,12 @@ async function loadState() {
                 currentMode = state.mode || 'repo';
                 updateUIForMode();
 
+                // Restaurer Deep Scan
+                const deepScanCheckbox = document.getElementById('deep-scan-checkbox');
+                if (state.isDeepScan && deepScanCheckbox) {
+                    deepScanCheckbox.checked = true;
+                }
+
                 // 2. Restaurer Résultats
                 if (state.results) {
                     currentResults = state.results;
@@ -480,11 +486,13 @@ async function loadState() {
  * Sauvegarde l'état actuel
  */
 function saveState() {
+    const deepScanCheckbox = document.getElementById('deep-scan-checkbox');
     const state = {
         repoUrl: repoUrlInput.value,
         mode: currentMode,
         results: currentResults,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        isDeepScan: deepScanCheckbox ? deepScanCheckbox.checked : false
     };
     chrome.storage.local.set({ vibeState: state });
 }
@@ -537,18 +545,111 @@ function initScanButton() {
 /**
  * Mode Repository
  */
+/**
+ * Mode Repository
+ */
 async function scanRepositoryMode(url) {
+    // 0. Vérifier historique
+    const previousScan = await checkHistory(url);
+    if (previousScan) {
+        const date = new Date(previousScan.timestamp).toLocaleTimeString();
+        if (confirm(`Ce dépôt a déjà été scanné à ${date}. Voulez-vous recharger les résultats précédents ?`)) {
+            currentResults = previousScan.results;
+            displayResults(currentResults);
+            saveState();
+            return;
+        }
+    }
+
     const token = await getStoredToken();
     console.log('Mode Repo: Token présent ?', !!token);
 
+    // V3: Check Deep Scan
+    const deepScanCheckbox = document.getElementById('deep-scan-checkbox');
+    const isDeepScan = deepScanCheckbox && deepScanCheckbox.checked;
+
+    if (isDeepScan && !token) {
+        alert("Deep Scan nécessite un Token GitHub configuré !");
+        // On continue en mode normal ou on stop ? Stop pour forcer le token.
+        return;
+    }
+
     try {
-        const results = await scanRepository(url, (progress) => {
-            updateProgress(progress);
-        }, { token });
+        // 1. Parser URL
+        const repoInfo = githubClient.parseGitHubUrl(url);
+        if (!repoInfo) throw new Error("URL GitHub invalide");
+
+        // 2. Récupérer les fichiers (Logique extraite de repo-scanner pour être partagée)
+        updateProgress({ stage: 'Récupération fichiers...', progress: 10 });
+
+        // On utilise githubClient directement pour avoir les fichiers "bruts"
+        const tree = await githubClient.getRepositoryTree(repoInfo.owner, repoInfo.repo, token);
+        const maxFiles = 50; // Limite par défaut
+        const filesToScan = tree.slice(0, maxFiles);
+
+        updateProgress({ stage: `Téléchargement ${filesToScan.length} fichiers...`, progress: 30 });
+
+        const filesWithContent = await githubClient.getMultipleFileContents(repoInfo.owner, repoInfo.repo, filesToScan, token);
+
+        let results;
+
+        if (isDeepScan) {
+            // 3a. Mode V3 Deep Scan
+            const MasterDetector = (await import('../analyzer/MasterDetector.js')).default;
+            const detector = new MasterDetector();
+            updateProgress({ stage: 'Deep Scan (Git History + Content)...', progress: 50 });
+
+            const report = await detector.analyzeRepository(
+                repoInfo.owner,
+                repoInfo.repo,
+                token,
+                filesWithContent, // MasterDetector attend {path, content}
+                { deepScan: true }
+            );
+
+            // Mapper le rapport V3 vers le format attendu par displayResults (V2)
+            results = {
+                score: report.summary.globalScore,
+                confidence: report.summary.confidence, // 'high', 'medium', 'low' -> map to % ? Non, displayResults attend un nombre pour V2?
+                // displayResults V2 fait: document.getElementById('confidence-value').innerText = results.confidence || 0;
+                // V3 return string. On va adapter.
+                verdict: report.summary.verdict,
+                summary: {
+                    human: report.distribution.clean, // mapping approximatif pour affichage
+                    uncertain: report.distribution.questionable,
+                    aiLikely: report.distribution.suspicious
+                },
+                results: report.files.suspicious.concat(report.files.clean).map(f => ({
+                    path: f.path,
+                    score: f.finalScore
+                })),
+                patterns: report.topPatterns, // V3 patterns
+                totalFiles: report.summary.fileCount,
+                temporal: report.temporal // Garder pour l'onglet temporal
+            };
+
+            // Hack pour confiance V2 (number) vs V3 (string)
+            results.confidence = report.summary.confidence === 'high' ? 90 : report.summary.confidence === 'medium' ? 60 : 30;
+
+        } else {
+            // 3b. Mode V2 Standard
+            updateProgress({ stage: 'Analyse Standard...', progress: 50 });
+            // On réutilise la logique V2 via scorer
+            const repoContext = { root: `${repoInfo.owner}/${repoInfo.repo}`, platform: 'github' };
+            results = analyzeRepository(filesWithContent, repoContext);
+
+            // Ajouter métadonnées manquantes pour V2 display
+            results.totalFiles = filesWithContent.length;
+        }
 
         currentResults = results;
         displayResults(results);
+
+        // Ajouter à l'historique
+        addToHistory(url, results);
+
         saveState();
+
 
     } catch (error) {
         console.error('Erreur scan:', error);
@@ -563,6 +664,47 @@ async function scanRepositoryMode(url) {
         }
     }
 }
+
+/**
+ * Gestion de l'historique des scans
+ */
+/**
+ * Gestion de l'historique des scans
+ */
+async function checkHistory(url) {
+    const key = getRepoBase(url) || url;
+    return new Promise((resolve) => {
+        chrome.storage.local.get(['scanHistory'], (result) => {
+            const history = result.scanHistory || {};
+            if (history[key]) {
+                const entry = history[key];
+                // Expiration 24h
+                if (Date.now() - entry.timestamp < 24 * 60 * 60 * 1000) {
+                    resolve(entry);
+                } else {
+                    delete history[key];
+                    chrome.storage.local.set({ scanHistory: history });
+                    resolve(null);
+                }
+            } else {
+                resolve(null);
+            }
+        });
+    });
+}
+
+async function addToHistory(url, results) {
+    const key = getRepoBase(url) || url;
+    chrome.storage.local.get(['scanHistory'], (r) => {
+        const history = r.scanHistory || {};
+        history[key] = {
+            timestamp: Date.now(),
+            results: results
+        };
+        chrome.storage.local.set({ scanHistory: history });
+    });
+}
+
 
 
 /**
@@ -758,16 +900,112 @@ function displayResults(results) {
     document.getElementById('score-number').innerText = results.score || 0;
 
     // Traduire le verdict
+    // Traduire le verdict
     const verdictMap = {
+        // V2 Strings
         '✅ Probablement code humain': 'verdict_human',
         '🤖 Très probablement généré par IA': 'verdict_ai_very',
         '⚠️ Probablement généré par IA': 'verdict_ai',
         '❓ Possiblement IA ou code mixte': 'verdict_mixed',
-        '❓ Mix probable IA/Humain': 'verdict_mixed',
-        '🤷 Incertain - pas assez de signaux': 'verdict_uncertain'
+        '🤷 Incertain - pas assez de signaux': 'verdict_uncertain',
+
+        // V3 Strings (Exact matches from scorer.js)
+        '🤷 Analyse incertaine': 'verdict_uncertain',
+        '🤖 IA Quasi-Certaine': 'verdict_ai_very',
+        '⚠️ Probablement IA': 'verdict_ai',
+        '❓ Code Mixte / Assisté': 'verdict_mixed',
+        '✅ Code Humain': 'verdict_human',
+        '👤 Probablement Humain': 'verdict_human'
     };
-    const translatedVerdict = t(verdictMap[results.verdict] || 'verdict_waiting');
+
+    // Fallback: If no match, use the raw string or "En attente" if empty
+    let translatedVerdict = t('verdict_waiting');
+
+    if (results.verdict) {
+        if (verdictMap[results.verdict]) {
+            translatedVerdict = t(verdictMap[results.verdict]);
+        } else {
+            // Use raw verdict if no translation key found (robustness)
+            translatedVerdict = results.verdict;
+        }
+    }
+
     document.getElementById('verdict-text').innerText = translatedVerdict;
+
+    // Update Temporal Tab Visibility
+    const tabTemporalBtn = document.getElementById('tab-temporal-btn');
+    const temporalContent = document.getElementById('temporal-content');
+
+    if (tabTemporalBtn && temporalContent) {
+        // Show tab if we have temporal data OR if it was explicitly a deep scan attempt (implied by content existing)
+        // We check if the object exists. Even if score is 0, it might convey "Not enough data".
+        if (results.temporal) {
+            const tData = results.temporal;
+
+            // Hide if truly empty default (score 0, low confidence, no details, no error/reason) 
+            // typically default `let temporalResult = { score: 0, confidence: 'low', details: null };`
+            // But if we want to show it was SKIPPED or FAILED, we should check deeper.
+            // Let's rely on: if Deep Scan was ON, we want to see it. 
+            // Only hide if it looks like a purely V2 scan (details null and no specific reason).
+
+            if (tData.score === 0 && !tData.details && !tData.reason && !tData.error) {
+                tabTemporalBtn.style.display = 'none';
+            } else {
+                tabTemporalBtn.style.display = 'block';
+
+                let innerContent = '';
+
+                if (tData.error) {
+                    innerContent = `<div style="padding:15px; color:var(--error-color);">❌ Erreur analyse: ${tData.error}</div>`;
+                } else if (tData.reason) {
+                    innerContent = `<div style="padding:15px; color:var(--text-secondary);">ℹ️ ${tData.reason}</div>`;
+                } else {
+                    // Normal display
+                    let detailsHtml = '';
+                    if (tData.breakdown) {
+                        detailsHtml = `
+                            <li>Régularité Commit: ${tData.breakdown.commitTiming}/100</li>
+                            <li>Variation Style: ${tData.breakdown.styleDrift}/100</li>
+                            <li>Changements Suspects: ${tData.breakdown.changePatterns || 0}/100</li>
+                          `;
+                    }
+
+                    const detailsObj = tData.details || {};
+                    const totalCommits = detailsObj.totalCommits || 0;
+                    const timeSpan = detailsObj.timeSpan || 'N/A';
+
+                    innerContent = `
+                        <div style="padding:15px; background:var(--bg-secondary); border-radius:8px; border:1px solid var(--border-color);">
+                            <h4 style="margin-top:0; display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:1.2em">📅</span> Analyse Temporelle (Git History)
+                            </h4>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                                <div>
+                                    <p style="margin:5px 0; font-size:0.9em; color:var(--text-secondary);">Score Anomalie</p>
+                                    <span style="font-size:1.4em; font-weight:bold; color:${getScoreColor(tData.score)}">${tData.score}%</span>
+                                </div>
+                                <div style="text-align:right;">
+                                    <p style="margin:5px 0; font-size:0.9em; color:var(--text-secondary);">Confiance</p>
+                                    <span>${tData.confidence || 'Moyenne'}</span>
+                                </div>
+                            </div>
+                            <div style="background:var(--bg-tertiary); padding:10px; border-radius:6px;">
+                                <ul style="padding-left:20px; margin:0; font-size:0.9em; color:var(--text-primary);">
+                                    <li>Commits analysés: ${totalCommits}</li>
+                                    <li>Durée activité: ${timeSpan}</li>
+                                    ${detailsHtml}
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                temporalContent.innerHTML = innerContent;
+            }
+        } else {
+            tabTemporalBtn.style.display = 'none';
+        }
+    }
 
     document.getElementById('confidence-value').innerText = results.confidence || 0;
     document.getElementById('files-count').innerText = results.totalFiles || 1;

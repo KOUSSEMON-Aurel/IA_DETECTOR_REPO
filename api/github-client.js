@@ -114,9 +114,55 @@ export async function getFileContent(owner, repo, path, token = null) {
         if (!error.message.includes('404')) {
             console.error(`Erreur lecture ${path}:`, error);
         }
+        return null; // Not fatal for single file
+    }
+}
+
+/**
+ * Récupère la liste des commits d'un repo
+ * @param {string} owner 
+ * @param {string} repo 
+ * @param {string} token 
+ * @param {number} limit 
+ */
+export async function getCommits(owner, repo, token = null, limit = 100) {
+    try {
+        const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits?per_page=${limit}`;
+        const headers = { 'Accept': 'application/vnd.github.v3+json' };
+        if (token) headers['Authorization'] = `token ${token}`;
+
+        const response = await fetch(url, { headers });
+        if (!response.ok) {
+            // Si 409 (Empty repo), on renvoie tableau vide
+            if (response.status === 409) return [];
+            throw new Error(`Erreur récupération commits: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('API Commits Error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Récupère les détails d'un commit unique (fichiers, stats)
+ */
+export async function getCommitDetails(owner, repo, sha, token = null) {
+    try {
+        const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits/${sha}`;
+        const headers = { 'Accept': 'application/vnd.github.v3+json' };
+        if (token) headers['Authorization'] = `token ${token}`;
+
+        const response = await fetch(url, { headers });
+        if (!response.ok) return null;
+
+        return await response.json();
+    } catch (error) {
+        console.error('API Commit Details Error:', error);
         return null;
     }
 }
+
 
 /**
  * Récupère le contenu de plusieurs fichiers en parallèle
