@@ -694,12 +694,22 @@ function extractComments(code) {
     const pythonMatches = code.match(pythonCommentRegex) || [];
     comments.push(...pythonMatches);
 
-    return comments.join('\n');
+    return comments;
 }
 
-function countMatches(text, regex) {
-    const matches = text.match(regex);
-    return matches ? matches.length : 0;
+function countMatches(input, regex) {
+    if (typeof input === 'string') {
+        const matches = input.match(regex);
+        return matches ? matches.length : 0;
+    }
+    // Si c'est un tableau de commentaires
+    if (Array.isArray(input)) {
+        return input.reduce((sum, comment) => {
+            const matches = comment.match(regex);
+            return sum + (matches ? matches.length : 0);
+        }, 0);
+    }
+    return 0;
 }
 
 function countFunctions(code) {
