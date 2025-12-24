@@ -678,10 +678,10 @@ function displayResults(results) {
         document.getElementById('stat-ai').innerText = results.summary.aiLikely || 0;
     }
 
-    // Hotspots
-    if (results.hotspots) {
-        displayHotspots(results.hotspots);
-    }
+    // Hotspots removed from UI
+    // if (results.hotspots) {
+    //     displayHotspots(results.hotspots);
+    // }
 
     // File tree
     if (results.results) {
