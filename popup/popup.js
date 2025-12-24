@@ -103,10 +103,8 @@ function toggleTheme() {
 function applyTheme(theme) {
     if (theme === 'light') {
         document.body.setAttribute('data-theme', 'light');
-        if (themeToggle) themeToggle.textContent = '🌙'; // Lune pour passer en dark
     } else {
         document.body.removeAttribute('data-theme'); // Défaut = dark
-        if (themeToggle) themeToggle.textContent = '☀️'; // Soleil pour passer en light
     }
 }
 
