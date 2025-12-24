@@ -12,9 +12,12 @@ import CONFIG from '../config/settings.js';
  * Scanne un repository GitHub complet
  * @param {string} url - URL du repo GitHub
  * @param {Function} progressCallback - Callback pour progression
+ * @param {Object} options - Options (token, etc.)
  * @returns {Promise<Object>} Résultats du scan
  */
-export async function scanGitHubRepository(url, progressCallback = null) {
+export async function scanGitHubRepository(url, progressCallback = null, options = {}) {
+    const { token } = options;
+
     try {
         // 1. Parser l'URL
         const repoInfo = githubClient.parseGitHubUrl(url);
@@ -26,8 +29,8 @@ export async function scanGitHubRepository(url, progressCallback = null) {
 
         if (progressCallback) progressCallback({ stage: 'Récupération arborescence...', progress: 0 });
 
-        // 2. Récupérer l'arborescence
-        const tree = await githubClient.getRepositoryTree(owner, repo);
+        // 2. Récupérer l'arborescence (AVEC TOKEN)
+        const tree = await githubClient.getRepositoryTree(owner, repo, token);
 
         // Limiter le nombre de fichiers
         const maxFiles = CONFIG.PERFORMANCE.maxFilesPerRepo;
@@ -41,8 +44,8 @@ export async function scanGitHubRepository(url, progressCallback = null) {
             });
         }
 
-        // 3. Détecter les formatters
-        const configFiles = await githubClient.getConfigFiles(owner, repo);
+        // 3. Détecter les formatters (AVEC TOKEN)
+        const configFiles = await githubClient.getConfigFiles(owner, repo, token);
         const formatterInfo = detectAutoFormatting(configFiles);
 
         if (progressCallback) {
@@ -53,8 +56,8 @@ export async function scanGitHubRepository(url, progressCallback = null) {
             });
         }
 
-        // 4. Récupérer le contenu des fichiers
-        const filesWithContent = await githubClient.getMultipleFileContents(owner, repo, filesToScan);
+        // 4. Récupérer le contenu des fichiers (AVEC TOKEN)
+        const filesWithContent = await githubClient.getMultipleFileContents(owner, repo, filesToScan, token);
 
         if (progressCallback) {
             progressCallback({
@@ -100,7 +103,7 @@ export async function scanGitHubRepository(url, progressCallback = null) {
 /**
  * Scanne un repository GitLab complet
  */
-export async function scanGitLabRepository(url, progressCallback = null) {
+export async function scanGitLabRepository(url, progressCallback = null, options = {}) {
     try {
         const repoInfo = gitlabClient.parseGitLabUrl(url);
         if (!repoInfo) {
@@ -111,7 +114,7 @@ export async function scanGitLabRepository(url, progressCallback = null) {
 
         if (progressCallback) progressCallback({ stage: 'Récupération arborescence...', progress: 0 });
 
-        const tree = await gitlabClient.getRepositoryTree(projectId);
+        const tree = await gitlabClient.getRepositoryTree(projectId); // TODO: Add token support for GitLab if needed
         const maxFiles = CONFIG.PERFORMANCE.maxFilesPerRepo;
         const filesToScan = tree.slice(0, maxFiles);
 
@@ -149,11 +152,11 @@ export async function scanGitLabRepository(url, progressCallback = null) {
 /**
  * Scanne automatiquement selon la plateforme
  */
-export async function scanRepository(url, progressCallback = null) {
+export async function scanRepository(url, progressCallback = null, options = {}) {
     if (url.includes('github.com')) {
-        return scanGitHubRepository(url, progressCallback);
+        return scanGitHubRepository(url, progressCallback, options);
     } else if (url.includes('gitlab.com')) {
-        return scanGitLabRepository(url, progressCallback);
+        return scanGitLabRepository(url, progressCallback, options);
     } else {
         throw new Error('Plateforme non supportée (GitHub ou GitLab uniquement)');
     }
