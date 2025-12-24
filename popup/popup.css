@@ -248,6 +248,8 @@ body {
     align-items: center;
     gap: 10px;
     transition: all 0.2s ease;
+    margin-bottom: 16px;
+    /* Added spacing from scan button */
 }
 
 .input-container:focus-within {
@@ -492,7 +494,7 @@ body {
     font-weight: 600;
 }
 
-/* Lists */
+/* Lists (Hotspots, Patterns, Files) */
 .hotspot-item,
 .pattern-item,
 .tree-item {
@@ -510,6 +512,28 @@ body {
 .tree-item:hover {
     background: var(--bg-tertiary);
     border-color: var(--border-highlight);
+}
+
+/* Tab CCONTENT Visibility - CRITIQUE */
+.tab-content {
+    display: none;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Settings Modal */
