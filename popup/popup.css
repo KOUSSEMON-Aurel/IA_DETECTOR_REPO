@@ -69,10 +69,13 @@ body {
     background: var(--bg-primary);
     color: var(--text-primary);
     width: 420px;
-    /* Slightly wider */
-    min-height: 550px;
-    overflow-x: hidden;
+    min-height: 200px;
+    /* Reduced initial height */
+    overflow: hidden;
+    /* Enforce global border radius clipping */
     transition: background-color 0.3s ease, color 0.3s ease;
+    border-radius: 16px;
+    /* Reduced from 20px slightly for standard look */
 }
 
 .container {

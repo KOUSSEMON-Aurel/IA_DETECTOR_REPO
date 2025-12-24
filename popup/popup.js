@@ -80,7 +80,7 @@ function initSettings() {
 function initTheme() {
     // 1. Charger thème sauvegardé
     chrome.storage.local.get(['theme'], (result) => {
-        const theme = result.theme || 'dark';
+        const theme = result.theme || 'light'; // Default to light
         applyTheme(theme);
     });
 
