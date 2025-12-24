@@ -1,13 +1,9 @@
 {
-    "manifest_version": 3,
+    "manifest_version": 2,
     "name": "Vibe Coding Detector",
     "description": "Détecte le code généré par IA sur GitHub et GitLab",
     "version": "1.0.0",
     "author": "DEXGUN",
-    "developer": {
-        "name": "DEXGUN",
-        "url": "https://github.com/KOUSSEMON-Aurel/IA_DETECTOR_REPO"
-    },
     "icons": {
         "16": "icons/icon-16.png",
         "48": "icons/icon-48.png",
@@ -15,15 +11,13 @@
     },
     "permissions": [
         "activeTab",
-        "storage"
-    ],
-    "host_permissions": [
+        "storage",
         "https://github.com/*",
         "https://gitlab.com/*",
         "https://api.github.com/*",
         "https://gitlab.com/api/*"
     ],
-    "action": {
+    "browser_action": {
         "default_popup": "popup/popup.html",
         "default_icon": {
             "16": "icons/icon-16.png",
@@ -39,7 +33,11 @@
     "browser_specific_settings": {
         "gecko": {
             "id": "vibe-detector@koussemon.com",
-            "strict_min_version": "109.0"
+            "data_collection_permissions": {
+                "required": [
+                    "none"
+                ]
+            }
         }
     },
     "content_scripts": [
@@ -57,14 +55,6 @@
         }
     ],
     "web_accessible_resources": [
-        {
-            "resources": [
-                "icons/*"
-            ],
-            "matches": [
-                "https://github.com/*",
-                "https://gitlab.com/*"
-            ]
-        }
+        "icons/*"
     ]
 }

@@ -8,7 +8,12 @@ console.log('Vibe Coding Detector - Background Script chargé');
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'scanCurrentRepo') {
         // Ouvrir le popup avec l'URL
-        chrome.action.openPopup();
+        try {
+            browser.browserAction.openPopup();
+        } catch (e) {
+            // Fallback
+            console.warn("OpenPopup not supported", e);
+        }
 
         // Envoyer l'URL au popup
         chrome.runtime.sendMessage({

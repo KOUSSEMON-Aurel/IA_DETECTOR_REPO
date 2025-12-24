@@ -138,6 +138,32 @@ function updateThemeUI(theme) {
     // Check popup.css lines 169+
 }
 
+function createFileIcon() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", "14");
+    svg.setAttribute("height", "14");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "2");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.style.marginRight = "6px";
+    svg.style.color = "var(--text-secondary)";
+
+    // Path
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z");
+    svg.appendChild(path);
+
+    // Polyline
+    const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    polyline.setAttribute("points", "13 2 13 9 20 9");
+    svg.appendChild(polyline);
+
+    return svg;
+}
+
 function openSettings(errorMsg = null) {
     // If called by event listener, errorMsg is an Event object
     if (errorMsg && typeof errorMsg !== 'string') {
@@ -150,11 +176,11 @@ function openSettings(errorMsg = null) {
     // ... existing token logic ...
     // Gestion du message d'erreur
     if (errorMsg && settingsAlert) {
-        settingsAlert.innerHTML = errorMsg;
+        settingsAlert.textContent = errorMsg;
         settingsAlert.classList.remove('hidden');
     } else if (settingsAlert) {
         settingsAlert.classList.add('hidden');
-        settingsAlert.innerHTML = '';
+        settingsAlert.textContent = '';
     }
 
     // Charger token actuel
@@ -255,18 +281,39 @@ async function openFilePicker() {
     }
 
     modal.classList.remove('hidden');
-    fileTreeContainer.innerHTML = '<div class="loading-spinner"></div><div style="text-align:center; color: var(--text-secondary); margin-top: 10px;">Chargement de l\'arbre...</div>';
+    fileTreeContainer.innerHTML = '';
+    const spinner = document.createElement('div');
+    spinner.className = 'loading-spinner';
+    const text = document.createElement('div');
+    text.style.textAlign = 'center';
+    text.style.color = 'var(--text-secondary)';
+    text.style.marginTop = '10px';
+    text.textContent = 'Chargement de l\'arbre...';
+    fileTreeContainer.appendChild(spinner);
+    fileTreeContainer.appendChild(text);
 
     try {
         const tree = await fetchRepoTree(url);
         renderFileTree(tree);
     } catch (error) {
-        fileTreeContainer.innerHTML = `
-    < div style = "color: var(--error-color); text-align: center; padding: 20px;" >
-        <p>Erreur: ${error.message}</p>
-                ${error.message.includes('403') ? '<p style="font-size: 12px; margin-top: 10px;">⚠️ Limite API atteinte. Réessayez plus tard ou configurez un token.</p>' : ''}
-            </div >
-    `;
+        fileTreeContainer.innerHTML = '';
+        const errDiv = document.createElement('div');
+        errDiv.style.color = 'var(--error-color)';
+        errDiv.style.textAlign = 'center';
+        errDiv.style.padding = '20px';
+
+        const p = document.createElement('p');
+        p.textContent = `Erreur: ${error.message}`;
+        errDiv.appendChild(p);
+
+        if (error.message.includes('403')) {
+            const subP = document.createElement('p');
+            subP.style.fontSize = '12px';
+            subP.style.marginTop = '10px';
+            subP.textContent = '⚠️ Limite API atteinte. Réessayez plus tard ou configurez un token.';
+            errDiv.appendChild(subP);
+        }
+        fileTreeContainer.appendChild(errDiv);
     }
 }
 
@@ -342,10 +389,14 @@ function renderFileTree(tree) {
         const el = document.createElement('div');
         el.className = `tree - item ${node.type === 'tree' ? 'folder' : 'file'} `;
         el.dataset.path = node.path;
-        el.innerHTML = `
-    < span > ${node.type === 'tree' ? '📁' : '📄'}</span >
-        <span>${node.path}</span>
-`;
+        const iconSpan = document.createElement('span');
+        iconSpan.textContent = node.type === 'tree' ? '📁' : '📄';
+
+        const pathSpan = document.createElement('span');
+        pathSpan.textContent = node.path;
+
+        el.appendChild(iconSpan);
+        el.appendChild(pathSpan);
 
         el.addEventListener('click', () => {
             selectPath(node.path);
@@ -766,15 +817,34 @@ function displayHotspots(hotspots) {
         // SVG File Icon (Same as tree view for consistency)
         const fileIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--text-secondary); min-width: 14px;"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>`;
 
-        item.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-        <span class="hotspot-name" title="${file.path}" style="display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            ${fileIcon}
-            ${file.path.split('/').pop()}
-        </span>
-        <span class="hotspot-score" style="font-weight: 700; color: ${getScoreColor(file.score)}; font-size: 12px;">${file.score}%</span>
-      </div>
-    `;
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.justifyContent = 'space-between';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.width = '100%';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'hotspot-name';
+        nameSpan.title = file.path;
+        nameSpan.style.display = 'flex';
+        nameSpan.style.alignItems = 'center';
+        nameSpan.style.overflow = 'hidden';
+        nameSpan.style.textOverflow = 'ellipsis';
+        nameSpan.style.whiteSpace = 'nowrap';
+
+        nameSpan.appendChild(createFileIcon());
+        nameSpan.appendChild(document.createTextNode(file.path.split('/').pop()));
+
+        const scoreSpan = document.createElement('span');
+        scoreSpan.className = 'hotspot-score';
+        scoreSpan.style.fontWeight = '700';
+        scoreSpan.style.color = getScoreColor(file.score);
+        scoreSpan.style.fontSize = '12px';
+        scoreSpan.textContent = `${file.score}%`;
+
+        wrapper.appendChild(nameSpan);
+        wrapper.appendChild(scoreSpan);
+        item.appendChild(wrapper);
         hotspotsList.appendChild(item);
     });
 }
@@ -789,17 +859,39 @@ function displayFileTree(files) {
         item.style.padding = '8px';
         item.style.borderBottom = '1px solid var(--border-color)';
         // SVG File Icon
-        const fileIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--text-secondary);"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>`;
 
-        item.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-size: 12px; display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            ${fileIcon}
-            <span title="${file.path}">${file.path}</span>
-        </span>
-        <span style="font-weight: 700; color: ${getScoreColor(file.score)}; font-size: 12px;">${file.score}%</span>
-      </div>
-    `;
+
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.justifyContent = 'space-between';
+        wrapper.style.alignItems = 'center';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.style.fontSize = '12px';
+        nameSpan.style.display = 'flex';
+        nameSpan.style.alignItems = 'center';
+        nameSpan.style.overflow = 'hidden';
+        nameSpan.style.textOverflow = 'ellipsis';
+        nameSpan.style.whiteSpace = 'nowrap';
+
+        const iconSpan = document.createElement('span');
+        iconSpan.appendChild(createFileIcon());
+        nameSpan.appendChild(iconSpan);
+
+        const pathSpan = document.createElement('span');
+        pathSpan.title = file.path;
+        pathSpan.textContent = file.path;
+        nameSpan.appendChild(pathSpan);
+
+        const scoreSpan = document.createElement('span');
+        scoreSpan.style.fontWeight = '700';
+        scoreSpan.style.color = getScoreColor(file.score);
+        scoreSpan.style.fontSize = '12px';
+        scoreSpan.textContent = `${file.score}%`;
+
+        wrapper.appendChild(nameSpan);
+        wrapper.appendChild(scoreSpan);
+        item.appendChild(wrapper);
         fileTree.appendChild(item);
     });
 }
@@ -818,12 +910,21 @@ function displayPatterns(patterns) {
     Object.entries(grouped).forEach(([category, items]) => {
         const section = document.createElement('div');
         section.className = 'pattern-item';
-        section.innerHTML = `
-      <div class="pattern-name">${formatCategory(category)}</div>
-      <div class="pattern-details">
-        ${items.map(i => `• ${i.name} (×${i.count})`).join('<br>')}
-      </div>
-    `;
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'pattern-name';
+        nameDiv.textContent = formatCategory(category);
+
+        const detailsDiv = document.createElement('div');
+        detailsDiv.className = 'pattern-details';
+
+        items.forEach(i => {
+            const line = document.createElement('div');
+            line.textContent = `• ${i.name} (×${i.count})`;
+            detailsDiv.appendChild(line);
+        });
+
+        section.appendChild(nameDiv);
+        section.appendChild(detailsDiv);
         patternsList.appendChild(section);
     });
 }
