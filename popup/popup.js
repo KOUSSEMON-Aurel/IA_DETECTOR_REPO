@@ -712,9 +712,18 @@ function displayHotspots(hotspots) {
     hotspots.slice(0, 5).forEach(file => {
         const item = document.createElement('div');
         item.className = 'hotspot-item';
+
+        // SVG File Icon (Same as tree view for consistency)
+        const fileIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--text-secondary); min-width: 14px;"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>`;
+
         item.innerHTML = `
-      <span class="hotspot-name" title="${file.path}">${file.path.split('/').pop()}</span>
-      <span class="hotspot-score">${file.score}%</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <span class="hotspot-name" title="${file.path}" style="display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            ${fileIcon}
+            ${file.path.split('/').pop()}
+        </span>
+        <span class="hotspot-score" style="font-weight: 700; color: ${getScoreColor(file.score)}; font-size: 12px;">${file.score}%</span>
+      </div>
     `;
         hotspotsList.appendChild(item);
     });
