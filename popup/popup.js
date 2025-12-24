@@ -500,11 +500,11 @@ function updateProgress(progress) {
     const loadingText = document.getElementById('loading-text');
 
     if (progress.progress !== undefined) {
-        progressFill.style.width = `${progress.progress}%`;
-        progressPercentage.innerText = `${progress.progress}%`;
+        if (progressFill) progressFill.style.width = `${progress.progress}%`;
+        if (progressPercentage) progressPercentage.innerText = `${progress.progress}%`;
     }
 
-    if (progress.stage) {
+    if (progress.stage && loadingText) {
         loadingText.innerText = progress.stage;
     }
 }
